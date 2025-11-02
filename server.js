@@ -171,46 +171,99 @@ if (adminRoutes) {
 }
 
 // ========================================
-// 📄 PAGE ROUTES
+// 📄 PAGE ROUTES - UPDATED FOR SUPABASE AUTH
 // ========================================
 
-// Public routes
-app.get("/", (req, res) => res.redirect('/login'));
-app.get("/login", (req, res) => res.render("login"));
+// Middleware to check Supabase authentication
+async function requireAuth(req, res, next) {
+    try {
+        // For API routes, check Authorization header
+        const token = req.headers.authorization?.replace('Bearer ', '');
+        
+        if (token) {
+            // Verify Supabase token
+            const { data: { user }, error } = await supabase.auth.getUser(token);
+            if (error) throw error;
+            if (user) {
+                req.user = user;
+                return next();
+            }
+        }
 
-// Teacher Dashboard
-app.get("/dashboard", (req, res) => {
-  console.log("✅ Teacher dashboard accessed");
-  res.render("teacher-dashboard");
+        // For page routes, we'll rely on client-side redirection
+        // Since we're using Supabase client-side, we can't reliably check auth on server
+        // Let the client handle the redirection
+        return next();
+        
+    } catch (error) {
+        console.log('Auth check failed:', error.message);
+        // Let client handle the redirection
+        return next();
+    }
+}
+
+// Protect dashboard routes - but let client handle actual auth
+app.get('/dashboard', requireAuth, (req, res) => {
+    res.render('dashboard');
 });
 
-// Admin Dashboard
-app.get("/admin", (req, res) => {
-  console.log("✅ Admin dashboard accessed");
-  res.render("admin-dashboard");
+app.get('/mark-attendance', requireAuth, (req, res) => {
+    res.render('dashboard');
 });
 
-// Admin User Management
-app.get("/admin/users", (req, res) => {
-  console.log("✅ Admin user management accessed");
-  res.render("admin-users");
+app.get('/manage-students', requireAuth, (req, res) => {
+    res.render('dashboard');
 });
 
-// New Attendance Page
-app.get("/new-attendance", (req, res) => {
-  res.render("new-attendance");
+app.get('/view-reports', requireAuth, (req, res) => {
+    res.render('dashboard');
 });
 
-// Student Management
-app.get("/student-management", (req, res) => {
-  console.log("✅ Student management page accessed");
-  res.render("student-management");
+// Login page should be accessible without auth
+app.get('/login', (req, res) => {
+    res.render('login');
 });
 
-// Reports Page
-app.get("/reports-page", (req, res) => {
-  console.log("✅ Reports page accessed");
-  res.render("reports");
+// Root redirect - check if we have a token in query params (from Supabase redirect)
+app.get('/', async (req, res) => {
+    try {
+        const { access_token, refresh_token } = req.query;
+        
+        if (access_token) {
+            // We have a Supabase token from OAuth or email confirmation
+            // Set the session and redirect to dashboard
+            const { data: { session }, error } = await supabase.auth.setSession({
+                access_token,
+                refresh_token
+            });
+            
+            if (!error && session) {
+                return res.redirect('/dashboard');
+            }
+        }
+        
+        // No valid token, redirect to login
+        res.redirect('/login');
+    } catch (error) {
+        console.error('Root route error:', error);
+        res.redirect('/login');
+    }
+});
+
+// Add a health check endpoint for Supabase session
+app.get('/api/auth/check', async (req, res) => {
+    try {
+        const token = req.headers.authorization?.replace('Bearer ', '');
+        if (token) {
+            const { data: { user }, error } = await supabase.auth.getUser(token);
+            if (user && !error) {
+                return res.json({ authenticated: true, user });
+            }
+        }
+        res.json({ authenticated: false });
+    } catch (error) {
+        res.json({ authenticated: false });
+    }
 });
 
 // ========================================
