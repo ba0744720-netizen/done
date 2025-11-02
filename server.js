@@ -40,10 +40,10 @@ const seedDatabase = async () => {
     console.log("🌱 Starting database seeding...");
     
     // Check Student count
-    const studentCount = await Student.count();
+    const studentCount = await students.count();
     if (studentCount === 0) {
       console.log("📚 Adding sample students...");
-      await Student.bulkCreate([
+      await students.bulkCreate([
         { name: "John Doe", rollNumber: "A001", class: "CSE-A" },
         { name: "Jane Smith", rollNumber: "A002", class: "CSE-A" },
         { name: "Alex Brown", rollNumber: "A003", class: "CSE-A" },

@@ -1160,6 +1160,16 @@ body::after {
                                 <option value="">All Branch</option>
                             </select>
                         </div>
+                        <div class="form-group">
+                   <label for="attendance-academic-year-filter">Academic Year *</label>
+                       <select id="attendance-academic-year-filter">
+                           <option value="">All Academic Year</option>
+                                 <option value="I">I</option>
+                                             <option value="II">II</option>
+                                 <option value="III">III</option>
+                                    <option value="IV">IV</option>
+                                       </select>
+                                 </div>
                     </div>
                     
                     <button class="btn btn-success" onclick="loadAttendanceStudents()">
@@ -1174,10 +1184,21 @@ body::after {
                         <i class="fas fa-pencil-alt" style="color: #000;"></i>
                     </button>
                     <table>
+                      <button class="edit-attendance-btn" id="edit-attendance-btn" style="display: none; background: none; border: none; cursor: pointer; position: absolute; top: 20px; right: 20px; z-index: 10;">
+    <i class="fas fa-pencil-alt" style="color: #000;"></i>
+</button>
+
+<!-- ✅ ADD THIS: All Present Button -->
+<div style="margin-bottom: 15px;">
+    <button class="btn btn-success" id="mark-all-present-btn" onclick="markAllPresent()" style="display: none;">
+        <i class="fas fa-check-double"></i> Mark All Present
+    </button>
+</div>
                         <thead>
                             <tr>
                                 <th>Name</th>
                                 <th>Register No</th>
+                                 <th>Branch</th>  <!-- ✅ Added Branch column -->
                                 <th>Attendance</th>
                             </tr>
                         </thead>
@@ -1260,6 +1281,16 @@ body::after {
                                 <option value="">All Branch</option>
                             </select>
                         </div>
+                        <div class="form-group">
+                          <label for="manage-academic-year-filter">Academic Year *</label>
+                    <select id="manage-academic-year-filter">
+                                <option value="">All Academic Year</option>
+                               <option value="I">I</option>
+                               <option value="II">II</option>
+                             <option value="III">III</option>
+                               <option value="IV">IV</option>
+                         </select>
+                            </div>
                     </div>
                     
                     <button class="btn btn-success" onclick="loadStudents()">
@@ -1353,6 +1384,16 @@ body::after {
                                 <option value="">All Branch</option>
                             </select>
                         </div>
+                        <div class="form-group">
+                            <label for="report-academic-year-filter">Academic Year *</label>
+                             <select id="report-academic-year-filter">
+                                  <option value="">All Academic Year</option>
+                               <option value="I">I</option>
+                                <option value="II">II</option>
+                            <option value="III">III</option>
+                           <option value="IV">IV</option>
+                                        </select>
+                                </div>
                     </div>
                     
                     <div class="date-range-section">
@@ -1949,6 +1990,7 @@ async function loadStudents() {
         const courseType = document.getElementById('course-type').value;
         const course = document.getElementById('course').value;
         const branch = document.getElementById('branch').value;
+        const academicYearFilter = document.getElementById('manage-academic-year-filter').value;
         
         // Build query
         let query = supabase.from('students').select('*');
@@ -1958,6 +2000,7 @@ async function loadStudents() {
         if (courseType) query = query.eq('coursetype', courseType);  // Changed
         if (course) query = query.eq('course', course);
         if (branch) query = query.eq('branch', branch);
+        if (academicYearFilter) query = query.eq('academicyear', academicYearFilter);
         
         const { data: students, error } = await query;
         
@@ -2067,9 +2110,8 @@ async function verifyStudent() {
         verifyBtn.disabled = false;
     }
 }
-
-        // Replace the loadAttendanceStudents() function in your HTML with this:
-async function loadAttendanceStudents() {
+// Replace the loadAttendanceStudents() function in your HTML with this:
+        async function loadAttendanceStudents() {
     try {
         // Show loading state
         const btn = document.querySelector('#attendance .btn-success');
@@ -2081,7 +2123,16 @@ async function loadAttendanceStudents() {
         const courseType = document.getElementById('attendance-course-type').value;
         const course = document.getElementById('attendance-course').value;
         const branch = document.getElementById('attendance-branch').value;
-        
+        const academicYearFilter = document.getElementById('attendance-academic-year-filter').value;
+
+        // ✅ Validation: At least one filter must be selected
+        if (!academicYear && !courseType && !course && !branch && !academicYearFilter) {
+            alert('⚠️ Please select the filter (Branch, Course Type, Course, Academic Year, or Admission Year) before loading students.');
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+            return;
+        }
+
         // Get today's date in DD/MM/YYYY format
         const today = new Date();
         const formattedDate = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
@@ -2090,10 +2141,12 @@ async function loadAttendanceStudents() {
         let query = supabase.from('students').select('*');
         
         // Apply filters - MATCH YOUR DATABASE COLUMNS
-        if (academicYear) query = query.eq('admissionyear', academicYear);  // Changed from admission_year
-        if (courseType) query = query.eq('coursetype', courseType);  // Changed from course_type
+        if (academicYear) query = query.eq('admissionyear', academicYear);
+        if (courseType) query = query.eq('coursetype', courseType);
         if (course) query = query.eq('course', course);
         if (branch) query = query.eq('branch', branch);
+        if (academicYearFilter) query = query.eq('academicyear', academicYearFilter);
+
         
         const { data: students, error: studentsError } = await query;
         
@@ -2102,28 +2155,33 @@ async function loadAttendanceStudents() {
             throw studentsError;
         }
         
-        console.log('Loaded students:', students); // Debug log
+        console.log('Loaded students:', students);
         
-        // Check if attendance already exists for this branch and date
-        const { data: existingAttendance, error: attendanceError } = await supabase
-            .from('attendances')
-            .select('*')
-            .eq('date', formattedDate)
-            .eq('branch', branch);
+       // ✅ Check if attendance already exists for this date AND selected filters
+let attendanceQuery = supabase
+    .from('attendances')
+    .select('*')
+    .eq('date', formattedDate);
+
+// Apply the SAME filters to attendance check
+if (branch) attendanceQuery = attendanceQuery.eq('branch', branch);
+// Note: We don't check other filters because attendance table only has branch
+
+const { data: existingAttendance, error: attendanceError } = await attendanceQuery;
         
         if (attendanceError) {
             console.error('Attendance query error:', attendanceError);
             throw attendanceError;
         }
         
-        console.log('Existing attendance:', existingAttendance); // Debug log
+        console.log('Existing attendance:', existingAttendance);
         
         // Update attendance table
         const tableBody = document.getElementById('attendanceTableBody');
         tableBody.innerHTML = '';
         
         if (!students || students.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="3" style="text-align: center;">No students found for the selected filters</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="4" style="text-align: center;">No students found for the selected filters</td></tr>';
             document.getElementById('total-attendance-count').textContent = '0';
             document.getElementById('present-count').textContent = '0';
             document.getElementById('absent-count').textContent = '0';
@@ -2135,27 +2193,33 @@ async function loadAttendanceStudents() {
         }
         
         students.forEach((student) => {
-            const row = document.createElement('tr');
-            
-            // Check if we have existing attendance for this student
-            let existingStatus = null;
-            if (existingAttendance && existingAttendance.length > 0) {
-                const studentAttendance = existingAttendance.find(a => a.register_number === student.registernumber);
-                if (studentAttendance) {
-                    existingStatus = studentAttendance.status;
-                }
-            }
+    const row = document.createElement('tr');
+    
+    // ✅ Check if attendance exists for THIS SPECIFIC student (date + register + branch)
+    let existingStatus = null;
+    if (existingAttendance && existingAttendance.length > 0) {
+        const studentAttendance = existingAttendance.find(a => 
+            a.register_number === student.registernumber && 
+            a.branch === student.branch
+        );
+        if (studentAttendance) {
+            existingStatus = studentAttendance.status;
+        }
+    }
             
             row.innerHTML = `
                 <td>${student.name}</td>
                 <td>${student.registernumber || ''}</td>
+                <td>${student.branch || ''}</td>
                 <td>
                     <div class="attendance-options">
                         <div class="attendance-btn present-btn ${existingStatus === 'present' ? 'selected' : ''}" 
-                             data-student-register="${student.registernumber}" 
+                             data-student-register="${student.registernumber}"
+                             data-student-branch="${student.branch}"
                              onclick="markAttendance(this, 'present')">P</div>
                         <div class="attendance-btn absent-btn ${existingStatus === 'absent' ? 'selected' : ''}" 
-                             data-student-register="${student.registernumber}" 
+                             data-student-register="${student.registernumber}"
+                             data-student-branch="${student.branch}"
                              onclick="markAttendance(this, 'absent')">A</div>
                     </div>
                 </td>
@@ -2172,18 +2236,20 @@ async function loadAttendanceStudents() {
         document.getElementById('total-attendance-count').textContent = students.length;
         updateAttendanceCounts();
         
-        // Show/hide edit button based on whether attendance exists
-        if (existingAttendance && existingAttendance.length > 0) {
-            document.getElementById('edit-attendance-btn').style.display = 'block';
-            document.getElementById('submit-attendance-btn').style.display = 'none';
-            document.getElementById('update-attendance-btn').style.display = 'none';
-            document.getElementById('attendance-card').classList.add('attendance-readonly');
-        } else {
-            document.getElementById('edit-attendance-btn').style.display = 'none';
-            document.getElementById('submit-attendance-btn').style.display = 'inline-flex';
-            document.getElementById('update-attendance-btn').style.display = 'none';
-            document.getElementById('attendance-card').classList.remove('attendance-readonly');
-        }
+        // Show/hide buttons based on whether attendance exists
+if (existingAttendance && existingAttendance.length > 0) {
+    document.getElementById('edit-attendance-btn').style.display = 'block';
+    document.getElementById('submit-attendance-btn').style.display = 'none';
+    document.getElementById('update-attendance-btn').style.display = 'none';
+    document.getElementById('mark-all-present-btn').style.display = 'none'; // ✅ Hide
+    document.getElementById('attendance-card').classList.add('attendance-readonly');
+} else {
+    document.getElementById('edit-attendance-btn').style.display = 'none';
+    document.getElementById('submit-attendance-btn').style.display = 'inline-flex';
+    document.getElementById('update-attendance-btn').style.display = 'none';
+    document.getElementById('mark-all-present-btn').style.display = 'inline-flex'; // ✅ Show
+    document.getElementById('attendance-card').classList.remove('attendance-readonly');
+}
         
         // Restore button
         btn.innerHTML = originalText;
@@ -2201,11 +2267,12 @@ async function loadAttendanceStudents() {
 }
 
         // Enable attendance editing
-        function enableAttendanceEditing() {
-            document.getElementById('attendance-card').classList.remove('attendance-readonly');
-            document.getElementById('edit-attendance-btn').style.display = 'none';
-            document.getElementById('update-attendance-btn').style.display = 'inline-flex';
-        }
+       function enableAttendanceEditing() {
+    document.getElementById('attendance-card').classList.remove('attendance-readonly');
+    document.getElementById('edit-attendance-btn').style.display = 'none';
+    document.getElementById('update-attendance-btn').style.display = 'inline-flex';
+    document.getElementById('mark-all-present-btn').style.display = 'inline-flex'; // ✅ Show button in edit mode
+}
 
         // Mark attendance for a student
         function markAttendance(element, status) {
@@ -2250,21 +2317,46 @@ async function loadAttendanceStudents() {
             document.getElementById('absent-count').textContent = absentCount;
         }
 
-        // Also update the submitAttendance function to use correct field names
-async function submitAttendance() {
+        // Mark all students as present
+function markAllPresent() {
+    if (document.getElementById('attendance-card').classList.contains('attendance-readonly')) {
+        alert('⚠️ Attendance is already submitted. Click the edit button to modify.');
+        return;
+    }
+    
+    if (!confirm('Mark all students as PRESENT?')) {
+        return;
+    }
+    
     const rows = document.querySelectorAll('#attendanceTableBody tr');
+    
+    rows.forEach(row => {
+        const presentBtn = row.querySelector('.present-btn');
+        const absentBtn = row.querySelector('.absent-btn');
+        
+        // Clear all selections
+        presentBtn.classList.remove('selected');
+        absentBtn.classList.remove('selected');
+        
+        // Mark as present
+        presentBtn.classList.add('selected');
+        row.setAttribute('data-attendance', 'present');
+    });
+    
+    updateAttendanceCounts();
+    
+    alert('✅ All students marked as PRESENT! You can now change individual students to absent if needed.');
+}
+
+//submit attendance
+    async function submitAttendance() {
+    const rows = document.querySelectorAll('#attendanceTableBody tr');
+
+    
     
     // Get today's date in DD/MM/YYYY format
     const today = new Date();
     const formattedDate = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
-    
-    // Get filter values
-    const branch = document.getElementById('attendance-branch').value;
-    
-    if (!branch) {
-        alert('Please select a branch before submitting attendance.');
-        return;
-    }
     
     // Check if all students have attendance marked
     let allMarked = true;
@@ -2290,13 +2382,14 @@ async function submitAttendance() {
         const attendanceRecords = [];
         
         rows.forEach(row => {
-            const studentName = row.cells[0].textContent;
-            const registerNo = row.cells[1].textContent;
+            const studentName = row.cells[0].textContent.trim();
+            const registerNo = row.cells[1].textContent.trim();
+            const studentBranch = row.cells[2].textContent.trim(); // ✅ Get branch from table
             const attendanceStatus = row.getAttribute('data-attendance');
             
             attendanceRecords.push({
                 date: formattedDate,
-                branch: branch,
+                branch: studentBranch,  // ✅ Use student's branch
                 student_name: studentName,
                 register_number: registerNo,
                 status: attendanceStatus,
@@ -2304,7 +2397,7 @@ async function submitAttendance() {
             });
         });
         
-        console.log('Submitting attendance:', attendanceRecords); // Debug log
+        console.log('Submitting attendance:', attendanceRecords);
         
         // Insert into Supabase
         const { data, error } = await supabase
@@ -2337,22 +2430,13 @@ async function submitAttendance() {
         btn.disabled = false;
     }
 }
-
-       // Also update the updateAttendance function
-async function updateAttendance() {
+// update attendance
+       async function updateAttendance() {
     const rows = document.querySelectorAll('#attendanceTableBody tr');
     
     // Get today's date in DD/MM/YYYY format
     const today = new Date();
     const formattedDate = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
-    
-    // Get filter values
-    const branch = document.getElementById('attendance-branch').value;
-    
-    if (!branch) {
-        alert('Please select a branch before updating attendance.');
-        return;
-    }
     
     // Check if all students have attendance marked
     let allMarked = true;
@@ -2374,47 +2458,77 @@ async function updateAttendance() {
         btn.innerHTML = '<span class="loading"></span> Updating...';
         btn.disabled = true;
         
-        // First, delete existing attendance records for this date and branch
-        const { error: deleteError } = await supabase
-            .from('attendances')
-            .delete()
-            .eq('date', formattedDate)
-            .eq('branch', branch);
+        console.log('🔄 Starting update for date:', formattedDate);
         
-        if (deleteError) {
-            console.error('Delete error:', deleteError);
-            throw deleteError;
-        }
+        let successCount = 0;
+        let errorCount = 0;
+        let notFoundCount = 0;
         
-        // Create updated attendance records
-        const updatedAttendance = [];
-        
-        rows.forEach(row => {
-            const studentName = row.cells[0].textContent;
-            const registerNo = row.cells[1].textContent;
+        // Update each student's attendance individually
+        for (const row of rows) {
+            const studentName = row.cells[0].textContent.trim();
+            const registerNo = row.cells[1].textContent.trim();
+            const studentBranch = row.cells[2].textContent.trim(); // ✅ Get branch from table
             const attendanceStatus = row.getAttribute('data-attendance');
             
-            updatedAttendance.push({
-                date: formattedDate,
-                branch: branch,
-                student_name: studentName,
-                register_number: registerNo,
-                status: attendanceStatus,
-                created_at: new Date().toISOString()
-            });
-        });
-        
-        // Insert updated records
-        const { data, error } = await supabase
-            .from('attendances')
-            .insert(updatedAttendance);
-        
-        if (error) {
-            console.error('Insert error:', error);
-            throw error;
+            console.log(`Updating: ${studentName} (${registerNo}) - Branch: ${studentBranch} to ${attendanceStatus}`);
+            
+            try {
+                // Find existing record by date, register_number, AND branch
+                const { data: existingRecord, error: checkError } = await supabase
+                    .from('attendances')
+                    .select('id, status')
+                    .eq('date', formattedDate)
+                    .eq('register_number', registerNo)
+                    .eq('branch', studentBranch)  // ✅ Match by branch too
+                    .single();
+                
+                if (checkError) {
+                    if (checkError.code === 'PGRST116') {
+                        console.log(`❌ Record not found for ${studentName} (${registerNo}) - ${studentBranch}`);
+                        notFoundCount++;
+                        continue;
+                    }
+                    throw checkError;
+                }
+                
+                console.log(`✅ Found record ID ${existingRecord.id} for ${studentName}`);
+                
+                // Update the existing record by ID
+                const { data: updateData, error: updateError } = await supabase
+                    .from('attendances')
+                    .update({
+                        status: attendanceStatus,
+                        student_name: studentName,  // ✅ Also update name in case it changed
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', existingRecord.id)
+                    .select();
+                
+                if (updateError) {
+                    console.error(`❌ Error updating ${studentName}:`, updateError);
+                    errorCount++;
+                } else {
+                    successCount++;
+                    console.log(`✅ Updated ${studentName}: ${existingRecord.status} → ${attendanceStatus}`);
+                }
+                
+            } catch (err) {
+                console.error(`❌ Error processing ${studentName}:`, err);
+                errorCount++;
+            }
         }
         
-        alert('Attendance updated successfully!');
+        // Show results
+        console.log(`📊 Update Summary: ✅ ${successCount} updated, ❌ ${errorCount} errors, 🔍 ${notFoundCount} not found`);
+        
+        if (notFoundCount > 0) {
+            alert(`⚠️ Some records were not found:\n✅ ${successCount} records updated\n❌ ${errorCount} errors\n🔍 ${notFoundCount} not found in database`);
+        } else if (errorCount > 0) {
+            alert(`⚠️ Update completed with errors:\n✅ ${successCount} records updated\n❌ ${errorCount} records failed`);
+        } else {
+            alert(`✅ Attendance updated successfully!\n${successCount} records updated.`);
+        }
         
         // Reset to read-only mode
         document.getElementById('edit-attendance-btn').style.display = 'block';
@@ -2426,7 +2540,7 @@ async function updateAttendance() {
         btn.disabled = false;
         
     } catch (error) {
-        console.error('Error updating attendance:', error);
+        console.error('❌ Error updating attendance:', error);
         alert('Error updating attendance: ' + (error.message || 'Please try again.'));
         
         // Restore button
@@ -2468,7 +2582,8 @@ async function generateReport() {
         const courseType = document.getElementById('report-course-type').value;
         const course = document.getElementById('report-course').value;
         const branch = document.getElementById('report-branch').value;
-        
+        const academicYearFilter = document.getElementById('report-academic-year-filter').value;
+
         if (!startDate || !endDate) {
             alert('Please select date range');
             btn.innerHTML = originalText;
@@ -2484,7 +2599,8 @@ async function generateReport() {
         if (courseType) studentQuery = studentQuery.eq('coursetype', courseType);
         if (course) studentQuery = studentQuery.eq('course', course);
         if (branch) studentQuery = studentQuery.eq('branch', branch);
-        
+        if (academicYearFilter) studentQuery = studentQuery.eq('academicyear', academicYearFilter);
+
         const { data: students, error: studentsError } = await studentQuery;
         
         if (studentsError) {
