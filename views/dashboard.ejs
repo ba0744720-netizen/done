@@ -1239,6 +1239,10 @@ body::after {
                 <div class="card">
                     <div class="actions-row">
                         <h2>Student Filter</h2>
+                        
+                      <button class="btn btn-success" onclick="openImportModal()">
+                          <i class="fas fa-file-import"></i> Import Students
+                          </button>
                         <button class="btn btn-primary" onclick="openAddStudentModal()">
                             <i class="fas fa-plus"></i> Add Student
                         </button>
@@ -1573,6 +1577,44 @@ body::after {
             </div>
         </div>
     </div>
+    <!-- Import Students Modal -->
+<div id="importModal" class="modal">
+    <div class="modal-content" style="max-width: 95%; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column;">
+        <div class="modal-header">
+            <h3 class="modal-title">Import Students (Bulk Upload)</h3>
+            <button class="close-btn" onclick="closeImportModal()">&times;</button>
+        </div>
+        <div class="modal-body" style="flex: 1; overflow: hidden; display: flex; flex-direction: column;">
+            <div style="margin-bottom: 15px; padding: 15px; background: #e3f2fd; border-radius: 8px;">
+                <p style="margin: 0; color: #1976d2; font-weight: 600;">
+                    <i class="fas fa-info-circle"></i> Instructions:
+                </p>
+                <ul style="margin: 10px 0 0 20px; color: #1976d2;">
+                    <li><strong>Easy Excel Paste:</strong> Copy data from Excel and paste directly in the first cell - data will automatically fill correctly!</li>
+                    <li><strong>Quick Fill Options:</strong> Select a dropdown value and click "Apply to All" to fill that column for all rows</li>
+                    <li>Click "Validate Data" to check for errors before importing</li>
+                </ul>
+            </div>
+            
+            <!-- Spreadsheet Container -->
+            <div id="spreadsheet-container" style="flex: 1; overflow: auto; border: 1px solid #ddd; border-radius: 8px;"></div>
+            
+            <div id="validation-results" style="margin-top: 15px; padding: 10px; border-radius: 8px; display: none;"></div>
+        </div>
+        <div class="modal-footer" style="justify-content: space-between;">
+            <button class="btn btn-outline" onclick="closeImportModal()">Cancel</button>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-warning" onclick="validateImportData()">
+                    <i class="fas fa-check-circle"></i> Validate Data
+                </button>
+                <button class="btn btn-success" id="import-submit-btn" onclick="submitImportData()" disabled>
+                    <i class="fas fa-upload"></i> Import Students
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
     
     <script>
         // Supabase Configuration
@@ -3165,24 +3207,446 @@ async function logout() {
     }
 }
 
+// Import Modal Functions
+let importData = [];
+let validatedData = [];
+
+function openImportModal() {
+    document.getElementById('importModal').style.display = 'flex';
+    initializeSpreadsheet();
+}
+
+function closeImportModal() {
+    document.getElementById('importModal').style.display = 'none';
+    importData = [];
+    validatedData = [];
+    document.getElementById('import-submit-btn').disabled = true;
+    document.getElementById('validation-results').style.display = 'none';
+}
+
+function initializeSpreadsheet() {
+    const container = document.getElementById('spreadsheet-container');
+    container.innerHTML = '';
+    
+    // Create table
+    const table = document.createElement('table');
+    table.style.width = '100%';
+    table.style.borderCollapse = 'collapse';
+    table.id = 'import-table';
+    
+    // Headers with "Apply to All" buttons
+    const headers = ['Name', 'Roll No', 'Register No', 'Admission Year', 'Course Type', 'Course', 'Branch', 'Academic Year'];
+    const thead = document.createElement('thead');
+    const headerRow = document.createElement('tr');
+    
+    headers.forEach((header, idx) => {
+        const th = document.createElement('th');
+        th.style.padding = '12px';
+        th.style.background = '#f5f5f5';
+        th.style.border = '1px solid #ddd';
+        th.style.position = 'sticky';
+        th.style.top = '0';
+        th.style.zIndex = '10';
+        
+        // Add "Apply to All" button for dropdown columns
+        if (idx >= 3) { // Admission Year, Course Type, Course, Branch, Academic Year
+            const btnContainer = document.createElement('div');
+            btnContainer.style.display = 'flex';
+            btnContainer.style.flexDirection = 'column';
+            btnContainer.style.gap = '5px';
+            
+            const headerText = document.createElement('div');
+            headerText.textContent = header;
+            headerText.style.fontWeight = '600';
+            
+            const applyBtn = document.createElement('button');
+            applyBtn.textContent = '↓ Apply to All';
+            applyBtn.style.padding = '4px 8px';
+            applyBtn.style.fontSize = '11px';
+            applyBtn.style.background = '#2196f3';
+            applyBtn.style.color = 'white';
+            applyBtn.style.border = 'none';
+            applyBtn.style.borderRadius = '4px';
+            applyBtn.style.cursor = 'pointer';
+            applyBtn.onclick = () => applyToAllColumn(idx);
+            applyBtn.onmouseover = function() { this.style.background = '#1976d2'; };
+            applyBtn.onmouseout = function() { this.style.background = '#2196f3'; };
+            
+            btnContainer.appendChild(headerText);
+            btnContainer.appendChild(applyBtn);
+            th.appendChild(btnContainer);
+        } else {
+            th.textContent = header;
+        }
+        
+        headerRow.appendChild(th);
+    });
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+    
+    // Body with 20 rows
+    const tbody = document.createElement('tbody');
+    for (let i = 0; i < 20; i++) {
+        const row = document.createElement('tr');
+        row.dataset.rowIndex = i;
+        
+        // Text inputs for Name, Roll No, Register No
+        for (let j = 0; j < 3; j++) {
+            const td = document.createElement('td');
+            td.style.padding = '0';
+            td.style.border = '1px solid #ddd';
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.style.width = '100%';
+            input.style.border = 'none';
+            input.style.padding = '12px';
+            input.style.fontSize = '14px';
+            input.dataset.row = i;
+            input.dataset.col = j;
+            
+            // Add paste handler for first cell
+            if (i === 0 && j === 0) {
+                input.addEventListener('paste', handlePaste);
+                input.placeholder = 'Paste Excel data here...';
+            }
+            
+            td.appendChild(input);
+            row.appendChild(td);
+        }
+        
+        // Admission Year dropdown
+        row.appendChild(createDropdownCell(i, 3, [
+            '', '2018-2019', '2019-2020', '2020-2021', '2021-2022', 
+            '2022-2023', '2023-2024', '2024-2025'
+        ]));
+        
+        // Course Type dropdown
+        const courseTypeTd = createDropdownCell(i, 4, ['', 'UG', 'PG']);
+        const courseTypeSelect = courseTypeTd.querySelector('select');
+        courseTypeSelect.onchange = function() {
+            updateImportCourseDropdown(i, this.value);
+        };
+        row.appendChild(courseTypeTd);
+        
+        // Course dropdown
+        const courseTd = createDropdownCell(i, 5, ['']);
+        courseTd.querySelector('select').id = `course-select-${i}`;
+        courseTd.querySelector('select').onchange = function() {
+            updateImportBranchDropdown(i, this.value);
+        };
+        row.appendChild(courseTd);
+        
+        // Branch dropdown
+        const branchTd = createDropdownCell(i, 6, ['']);
+        branchTd.querySelector('select').id = `branch-select-${i}`;
+        row.appendChild(branchTd);
+        
+        // Academic Year dropdown
+        row.appendChild(createDropdownCell(i, 7, ['', 'I', 'II', 'III', 'IV']));
+        
+        tbody.appendChild(row);
+    }
+    table.appendChild(tbody);
+    container.appendChild(table);
+}
+
+function createDropdownCell(rowIndex, colIndex, options) {
+    const td = document.createElement('td');
+    td.style.padding = '0';
+    td.style.border = '1px solid #ddd';
+    const select = document.createElement('select');
+    select.style.width = '100%';
+    select.style.border = 'none';
+    select.style.padding = '12px';
+    select.style.fontSize = '14px';
+    select.dataset.row = rowIndex;
+    select.dataset.col = colIndex;
+    
+    options.forEach(opt => {
+        const option = document.createElement('option');
+        option.value = opt;
+        option.textContent = opt || 'Select';
+        select.appendChild(option);
+    });
+    
+    td.appendChild(select);
+    return td;
+}
+
+function handlePaste(e) {
+    e.preventDefault();
+    
+    const pastedText = (e.clipboardData || window.clipboardData).getData('text');
+    const rows = pastedText.split('\n').map(row => row.split('\t'));
+    
+    console.log('Pasted data:', rows);
+    
+    const table = document.getElementById('import-table');
+    const tbody = table.querySelector('tbody');
+    const tableRows = tbody.querySelectorAll('tr');
+    
+    rows.forEach((rowData, rowIndex) => {
+        if (rowIndex >= tableRows.length) return;
+        
+        const tableRow = tableRows[rowIndex];
+        const inputs = tableRow.querySelectorAll('input, select');
+        
+        rowData.forEach((cellData, colIndex) => {
+            if (colIndex >= inputs.length) return;
+            
+            const cell = inputs[colIndex];
+            const cleanData = cellData.trim();
+            
+            if (cell.tagName === 'INPUT') {
+                cell.value = cleanData;
+            } else if (cell.tagName === 'SELECT') {
+                // Try to match dropdown value
+                const options = Array.from(cell.options);
+                const matchedOption = options.find(opt => 
+                    opt.value.toLowerCase() === cleanData.toLowerCase()
+                );
+                
+                if (matchedOption) {
+                    cell.value = matchedOption.value;
+                    
+                    // Trigger cascading dropdowns
+                    if (colIndex === 4) { // Course Type
+                        updateImportCourseDropdown(rowIndex, matchedOption.value);
+                    } else if (colIndex === 5) { // Course
+                        updateImportBranchDropdown(rowIndex, matchedOption.value);
+                    }
+                }
+            }
+        });
+    });
+    
+    alert(`✅ Pasted ${rows.length} rows successfully!`);
+}
+
+function applyToAllColumn(colIndex) {
+    const table = document.getElementById('import-table');
+    const tbody = table.querySelector('tbody');
+    const firstRow = tbody.querySelector('tr');
+    const firstCell = firstRow.querySelectorAll('input, select')[colIndex];
+    
+    if (!firstCell.value) {
+        alert('⚠️ Please select a value in the first row before applying to all!');
+        return;
+    }
+    
+    const valueToApply = firstCell.value;
+    
+    if (!confirm(`Apply "${valueToApply}" to all rows in this column?`)) {
+        return;
+    }
+    
+    const allRows = tbody.querySelectorAll('tr');
+    
+    allRows.forEach((row, rowIndex) => {
+        const cell = row.querySelectorAll('input, select')[colIndex];
+        cell.value = valueToApply;
+        
+        // Handle cascading dropdowns
+        if (colIndex === 4) { // Course Type
+            updateImportCourseDropdown(rowIndex, valueToApply);
+        } else if (colIndex === 5) { // Course
+            updateImportBranchDropdown(rowIndex, valueToApply);
+        }
+    });
+    
+    alert(`✅ Applied "${valueToApply}" to all rows!`);
+}
+
+function updateImportCourseDropdown(rowIndex, courseType) {
+    const courseSelect = document.getElementById(`course-select-${rowIndex}`);
+    courseSelect.innerHTML = '<option value="">Select</option>';
+    
+    if (courseType && courseOptions[courseType]) {
+        courseOptions[courseType].forEach(course => {
+            const option = document.createElement('option');
+            option.value = course;
+            option.textContent = course;
+            courseSelect.appendChild(option);
+        });
+    }
+    
+    // Reset branch dropdown
+    const branchSelect = document.getElementById(`branch-select-${rowIndex}`);
+    branchSelect.innerHTML = '<option value="">Select</option>';
+}
+
+function updateImportBranchDropdown(rowIndex, course) {
+    const branchSelect = document.getElementById(`branch-select-${rowIndex}`);
+    branchSelect.innerHTML = '<option value="">Select</option>';
+    
+    if (course && branchOptions[course]) {
+        branchOptions[course].forEach(branch => {
+            const option = document.createElement('option');
+            option.value = branch;
+            option.textContent = branch;
+            branchSelect.appendChild(option);
+        });
+    }
+}
+
+function validateImportData() {
+    const rows = document.querySelectorAll('#spreadsheet-container tbody tr');
+    const validationResults = document.getElementById('validation-results');
+    validatedData = [];
+    let errors = [];
+    let validCount = 0;
+    
+    rows.forEach((row, index) => {
+        const inputs = row.querySelectorAll('input, select');
+        const rowData = {
+            name: inputs[0].value.trim(),
+            rollnumber: inputs[1].value.trim(),
+            registernumber: inputs[2].value.trim(),
+            admissionyear: inputs[3].value,
+            coursetype: inputs[4].value,
+            course: inputs[5].value,
+            branch: inputs[6].value,
+            academicyear: inputs[7].value
+        };
+        
+        // Skip empty rows
+        if (!rowData.name && !rowData.rollnumber && !rowData.registernumber) {
+            return;
+        }
+        
+        // Validate required fields
+        const rowErrors = [];
+        if (!rowData.name) rowErrors.push('Name is required');
+        if (!rowData.rollnumber) rowErrors.push('Roll No is required');
+        if (!rowData.registernumber) rowErrors.push('Register No is required');
+        if (!rowData.admissionyear) rowErrors.push('Admission Year must be selected');
+        if (!rowData.coursetype) rowErrors.push('Course Type must be selected');
+        if (!rowData.course) rowErrors.push('Course must be selected');
+        if (!rowData.branch) rowErrors.push('Branch must be selected');
+        if (!rowData.academicyear) rowErrors.push('Academic Year must be selected');
+        
+        if (rowErrors.length > 0) {
+            errors.push(`Row ${index + 1}: ${rowErrors.join(', ')}`);
+        } else {
+            validatedData.push(rowData);
+            validCount++;
+        }
+    });
+    
+    // Display results
+    validationResults.style.display = 'block';
+    if (errors.length === 0 && validCount > 0) {
+        validationResults.style.background = '#e8f5e9';
+        validationResults.style.border = '1px solid #4caf50';
+        validationResults.innerHTML = `
+            <p style="color: #2e7d32; font-weight: 600; margin: 0;">
+                <i class="fas fa-check-circle"></i> Validation Successful!
+            </p>
+            <p style="color: #2e7d32; margin: 10px 0 0 0;">
+                ${validCount} student(s) ready to import. Click "Import Students" to proceed.
+            </p>
+        `;
+        document.getElementById('import-submit-btn').disabled = false;
+    } else if (errors.length > 0) {
+        validationResults.style.background = '#ffebee';
+        validationResults.style.border = '1px solid #f44336';
+        validationResults.innerHTML = `
+            <p style="color: #c62828; font-weight: 600; margin: 0;">
+                <i class="fas fa-exclamation-triangle"></i> Validation Errors Found:
+            </p>
+            <ul style="color: #c62828; margin: 10px 0 0 20px; max-height: 150px; overflow-y: auto;">
+                ${errors.map(err => `<li>${err}</li>`).join('')}
+            </ul>
+            ${validCount > 0 ? `<p style="color: #f57c00; margin: 10px 0 0 0;">${validCount} valid rows found. Fix errors to import all data.</p>` : ''}
+        `;
+        document.getElementById('import-submit-btn').disabled = errors.length > 0 && validCount === 0;
+    } else {
+        validationResults.style.background = '#fff3e0';
+        validationResults.style.border = '1px solid #ff9800';
+        validationResults.innerHTML = `
+            <p style="color: #e65100; font-weight: 600; margin: 0;">
+                <i class="fas fa-info-circle"></i> No data found to import.
+            </p>
+        `;
+        document.getElementById('import-submit-btn').disabled = true;
+    }
+}
+
+async function submitImportData() {
+    if (validatedData.length === 0) {
+        alert('Please validate data first!');
+        return;
+    }
+    
+    if (!confirm(`Import ${validatedData.length} student(s)?`)) {
+        return;
+    }
+    
+    const btn = document.getElementById('import-submit-btn'); // ✅ Declare ONCE at the top
+    
+    try {
+        btn.innerHTML = '<span class="loading"></span> Importing...';
+        btn.disabled = true;
+        
+        // Add verification and timestamps
+        const studentsToImport = validatedData.map(student => ({
+            ...student,
+            verification: 'UNVERIFIED',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+        }));
+        
+        const { data, error } = await supabase
+            .from('students')
+            .insert(studentsToImport);
+        
+        if (error) throw error;
+        
+        alert(`Successfully imported ${validatedData.length} student(s)!`);
+        
+        // Refresh student list
+        await loadStudents();
+        
+        // Close modal
+        closeImportModal();
+        
+        // ✅ NO REDECLARATION - just update the existing btn
+        btn.innerHTML = '<i class="fas fa-upload"></i> Import Students';
+        btn.disabled = true; // Disabled until next validation
+        
+    } catch (error) {
+        console.error('Error importing students:', error);
+        alert('Error importing students: ' + error.message);
+        
+        // ✅ NO REDECLARATION - just update the existing btn
+        btn.innerHTML = '<i class="fas fa-upload"></i> Import Students';
+        btn.disabled = false;
+    }
+}
+
         // Close modal when clicking outside of it
         window.onclick = function(event) {
-            const verificationModal = document.getElementById('verificationModal');
-            const addStudentModal = document.getElementById('addStudentModal');
-            const exportModal = document.getElementById('exportModal');
-            
-            if (event.target === verificationModal) {
-                closeVerificationModal();
-            }
-            
-            if (event.target === addStudentModal) {
-                closeAddStudentModal();
-            }
-            
-            if (event.target === exportModal) {
-                closeExportModal();
-            }
-        }
+    const verificationModal = document.getElementById('verificationModal');
+    const addStudentModal = document.getElementById('addStudentModal');
+    const exportModal = document.getElementById('exportModal');
+    const importModal = document.getElementById('importModal');
+    
+    if (event.target === verificationModal) {
+        closeVerificationModal();
+    }
+    
+    if (event.target === addStudentModal) {
+        closeAddStudentModal();
+    }
+    
+    if (event.target === exportModal) {
+        closeExportModal();
+    }
+    
+    if (event.target === importModal) {
+        closeImportModal();
+    }
+}
     </script>
 </body>
 </html>
