@@ -3,276 +3,648 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard | PGP</title>
+    <title>Admin Dashboard - PGP Colleges</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React and ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel Standalone for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
-        
-        .header {
-            background: rgba(0, 0, 0, 0.3);
-            backdrop-filter: blur(10px);
-            color: white;
-            padding: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        .animate-slideIn {
+            animation: slideIn 0.3s ease-out;
         }
-
-        .header h1 {
-            font-size: 24px;
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
         }
-
-        .admin-badge {
-            background: #ff4757;
-            color: white;
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-            text-transform: uppercase;
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #1e293b;
+            border-radius: 4px;
         }
-
-        .logout-btn {
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            padding: 8px 20px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 600;
-            margin-left: 20px;
-            transition: all 0.3s ease;
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 4px;
         }
-
-        .logout-btn:hover {
-            background: rgba(255, 255, 255, 0.3);
-        }
-        
-        .container {
-            max-width: 1200px;
-            margin: 30px auto;
-            padding: 20px;
-        }
-        
-        .welcome-card {
-            background: rgba(255, 255, 255, 0.95);
-            padding: 40px;
-            border-radius: 15px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        
-        .welcome-title {
-            font-size: 32px;
-            color: #667eea;
-            margin-bottom: 10px;
-        }
-
-        .welcome-subtitle {
-            color: #666;
-            font-size: 16px;
-            margin-bottom: 30px;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-
-        .stat-card {
-            background: white;
-            padding: 25px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            text-align: center;
-        }
-
-        .stat-value {
-            font-size: 36px;
-            font-weight: 700;
-            color: #667eea;
-            margin-bottom: 5px;
-        }
-
-        .stat-label {
-            color: #666;
-            font-size: 14px;
-        }
-
-        .action-buttons {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-        }
-
-        .action-card {
-            background: white;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-decoration: none;
-            color: inherit;
-        }
-
-        .action-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
-        }
-
-        .action-card .icon {
-            font-size: 48px;
-            margin-bottom: 15px;
-        }
-
-        .action-card h3 {
-            font-size: 20px;
-            color: #667eea;
-            margin-bottom: 10px;
-        }
-
-        .action-card p {
-            color: #666;
-            font-size: 14px;
-        }
-
-        .action-card.students {
-            border-top: 4px solid #4CAF50;
-        }
-
-        .action-card.users {
-            border-top: 4px solid #9C27B0;
-        }
-
-        .action-card.reports {
-            border-top: 4px solid #FF9800;
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>🔐 Admin Control Panel</h1>
-        <div style="display: flex; align-items: center; gap: 15px;">
-            <div class="admin-badge">ADMIN</div>
-            <div style="color: white;">
-                <div style="font-weight: 600;" id="adminName">Loading...</div>
-            </div>
-            <button class="logout-btn" onclick="logout()">Logout</button>
-        </div>
-    </div>
-    
-    <div class="container">
-        <div class="welcome-card">
-            <h1 class="welcome-title">Admin Dashboard</h1>
-            <p class="welcome-subtitle">Manage system users, students, and view reports</p>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        
+        // Lucide React Icons
+        const Home = lucide.Home;
+        const Users = lucide.Users;
+        const GraduationCap = lucide.GraduationCap;
+        const BarChart3 = lucide.BarChart3;
+        const Activity = lucide.Activity;
+        const Search = lucide.Search;
+        const Plus = lucide.Plus;
+        const Edit = lucide.Edit;
+        const Trash2 = lucide.Trash2;
+        const Download = lucide.Download;
+        const Clock = lucide.Clock;
+        const User = lucide.User;
+        const Shield = lucide.Shield;
+        const CheckCircle = lucide.CheckCircle;
+
+        const Icon = ({ icon: IconComponent, ...props }) => {
+            const ref = React.useRef(null);
             
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-value" id="totalUsers">0</div>
-                    <div class="stat-label">Total Users</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="totalStudents">0</div>
-                    <div class="stat-label">Total Students</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="todayAttendance">0</div>
-                    <div class="stat-label">Today's Attendance</div>
-                </div>
-            </div>
+            React.useEffect(() => {
+                if (ref.current) {
+                    lucide.createElement(IconComponent, props).render(ref.current);
+                }
+            }, [IconComponent, props]);
             
-            <div class="action-buttons">
-                <a href="/admin/users" class="action-card users">
-                    <div class="icon">👤</div>
-                    <h3>Manage Users</h3>
-                    <p>Add, edit, and manage teachers and admins</p>
-                </a>
+            return <i ref={ref} />;
+        };
 
-                <a href="/student-management" class="action-card students">
-                    <div class="icon">👥</div>
-                    <h3>Manage Students</h3>
-                    <p>Add, edit, and view student records</p>
-                </a>
+        const AdminDashboard = () => {
+            const [currentPage, setCurrentPage] = useState('dashboard');
+            const [liveActivities, setLiveActivities] = useState([
+                { id: 1, time: '16:24:10', staffId: 'T001', name: 'Dr. Rajesh Kumar', action: 'Marked attendance for CSE-III', type: 'attendance' },
+                { id: 2, time: '16:22:05', staffId: 'T005', name: 'Prof. Priya Singh', action: 'Added new student: Amit Sharma', type: 'student' },
+                { id: 3, time: '16:20:30', staffId: 'T003', name: 'Dr. Suresh Patel', action: 'Generated monthly report', type: 'report' },
+                { id: 4, time: '16:18:15', staffId: 'T007', name: 'Dr. Meena Reddy', action: 'Updated student details', type: 'update' },
+                { id: 5, time: '16:15:45', staffId: 'T002', name: 'Prof. Anil Verma', action: 'Marked attendance for EEE-II', type: 'attendance' },
+            ]);
 
-                <a href="/reports-page" class="action-card reports">
-                    <div class="icon">📊</div>
-                    <h3>View Reports</h3>
-                    <p>Generate and download attendance reports</p>
-                </a>
-            </div>
-        </div>
-    </div>
-    
-    <script>
-        // Check authentication
-        const token = localStorage.getItem('authToken');
-        const userName = localStorage.getItem('userName');
-        const userRole = localStorage.getItem('userRole');
-        
-        if (!token) {
-            window.location.href = '/login';
-        }
+            const [stats, setStats] = useState({
+                totalUsers: 24,
+                totalStudents: 1847,
+                todayAttendance: 1623,
+                activeNow: 8
+            });
 
-        if (userRole !== 'admin') {
-            window.location.href = '/dashboard';
-        }
-        
-        if (userName) {
-            document.getElementById('adminName').textContent = userName;
-        }
+            const [users, setUsers] = useState([
+                { id: 1, name: 'Dr. Rajesh Kumar', email: 'rajesh.kumar@pgp.edu.in', role: 'Teacher', staffId: 'T001', department: 'CSE', status: 'Active' },
+                { id: 2, name: 'Prof. Anil Verma', email: 'anil.verma@pgp.edu.in', role: 'Teacher', staffId: 'T002', department: 'EEE', status: 'Active' },
+                { id: 3, name: 'Dr. Suresh Patel', email: 'suresh.patel@pgp.edu.in', role: 'Teacher', staffId: 'T003', department: 'MECH', status: 'Active' },
+                { id: 4, name: 'Dr. Kavita Sharma', email: 'kavita.sharma@pgp.edu.in', role: 'Teacher', staffId: 'T004', department: 'CIVIL', status: 'Inactive' },
+                { id: 5, name: 'Prof. Priya Singh', email: 'priya.singh@pgp.edu.in', role: 'Teacher', staffId: 'T005', department: 'IT', status: 'Active' },
+            ]);
 
-        // Load statistics
-        async function loadStats() {
-            try {
-                // Load users count
-                const usersRes = await fetch('/api/admin/users', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                const usersData = await usersRes.json();
-                if (usersData.success) {
-                    document.getElementById('totalUsers').textContent = usersData.data.length;
+            const [students, setStudents] = useState([
+                { id: 1, name: 'Amit Sharma', registerNo: '22CS001', branch: 'CSE', academicYear: 'III', admissionYear: '2022-2023', status: 'Active' },
+                { id: 2, name: 'Priya Patel', registerNo: '22EE045', branch: 'EEE', academicYear: 'III', admissionYear: '2022-2023', status: 'Active' },
+                { id: 3, name: 'Rahul Verma', registerNo: '23CS078', branch: 'CSE', academicYear: 'II', admissionYear: '2023-2024', status: 'Active' },
+                { id: 4, name: 'Sneha Reddy', registerNo: '21ME032', branch: 'MECH', academicYear: 'IV', admissionYear: '2021-2022', status: 'Active' },
+                { id: 5, name: 'Vijay Kumar', registerNo: '23IT089', branch: 'IT', academicYear: 'II', admissionYear: '2023-2024', status: 'Active' },
+            ]);
+
+            const [searchQuery, setSearchQuery] = useState('');
+
+            useEffect(() => {
+                const interval = setInterval(() => {
+                    const actions = [
+                        { action: 'Marked attendance for CSE-III', type: 'attendance' },
+                        { action: 'Added new student', type: 'student' },
+                        { action: 'Updated student details', type: 'update' },
+                        { action: 'Generated report', type: 'report' },
+                        { action: 'Verified student data', type: 'verification' },
+                    ];
+                    
+                    const names = ['Dr. Rajesh Kumar', 'Prof. Priya Singh', 'Dr. Suresh Patel', 'Prof. Anil Verma', 'Dr. Meena Reddy'];
+                    const staffIds = ['T001', 'T002', 'T003', 'T005', 'T007'];
+                    
+                    const randomIndex = Math.floor(Math.random() * actions.length);
+                    const nameIndex = Math.floor(Math.random() * names.length);
+                    
+                    const newActivity = {
+                        id: Date.now(),
+                        time: new Date().toLocaleTimeString('en-GB'),
+                        staffId: staffIds[nameIndex],
+                        name: names[nameIndex],
+                        action: actions[randomIndex].action,
+                        type: actions[randomIndex].type
+                    };
+                    
+                    setLiveActivities(prev => [newActivity, ...prev].slice(0, 20));
+                }, 8000);
+
+                return () => clearInterval(interval);
+            }, []);
+
+            const getActivityColor = (type) => {
+                const colors = {
+                    attendance: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+                    student: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+                    report: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+                    update: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+                    verification: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30',
+                };
+                return colors[type] || 'bg-gray-500/20 text-gray-400 border-gray-500/30';
+            };
+
+            const getActivityIcon = (type) => {
+                switch(type) {
+                    case 'attendance': return '✓';
+                    case 'student': return '+';
+                    case 'report': return '📊';
+                    case 'update': return '✏️';
+                    case 'verification': return '✔️';
+                    default: return '•';
                 }
+            };
 
-                // Load students count
-                const studentsRes = await fetch('/students', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                const studentsData = await studentsRes.json();
-                if (studentsData.success) {
-                    document.getElementById('totalStudents').textContent = studentsData.data.length;
-                }
+            const renderDashboard = () => (
+                <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        <div className="bg-gradient-to-br from-slate-800 to-slate-900 p-6 rounded-xl border border-slate-700 hover:border-emerald-500/50 transition-all">
+                            <div className="flex items-center justify-between mb-4">
+                                <Icon icon="Users" className="w-8 h-8 text-emerald-400" />
+                                <span className="text-xs text-emerald-400 bg-emerald-500/20 px-2 py-1 rounded-full">Live</span>
+                            </div>
+                            <div className="text-3xl font-bold text-white mb-2">{stats.totalUsers}</div>
+                            <div className="text-sm text-slate-400">Total Staff</div>
+                        </div>
 
-                // Load today's attendance count
-                const attendanceRes = await fetch('/attendance/today', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                const attendanceData = await attendanceRes.json();
-                if (attendanceData.success) {
-                    document.getElementById('todayAttendance').textContent = attendanceData.data.length;
-                }
-            } catch (error) {
-                console.error('Error loading stats:', error);
-            }
-        }
-        
-        function logout() {
-            localStorage.clear();
-            window.location.href = '/login';
-        }
+                        <div className="bg-gradient-to-br from-slate-800 to-slate-900 p-6 rounded-xl border border-slate-700 hover:border-blue-500/50 transition-all">
+                            <div className="flex items-center justify-between mb-4">
+                                <Icon icon="GraduationCap" className="w-8 h-8 text-blue-400" />
+                                <span className="text-xs text-blue-400 bg-blue-500/20 px-2 py-1 rounded-full">Active</span>
+                            </div>
+                            <div className="text-3xl font-bold text-white mb-2">{stats.totalStudents}</div>
+                            <div className="text-sm text-slate-400">Total Students</div>
+                        </div>
 
-        // Load stats on page load
-        loadStats();
+                        <div className="bg-gradient-to-br from-slate-800 to-slate-900 p-6 rounded-xl border border-slate-700 hover:border-purple-500/50 transition-all">
+                            <div className="flex items-center justify-between mb-4">
+                                <Icon icon="CheckCircle" className="w-8 h-8 text-purple-400" />
+                                <span className="text-xs text-purple-400 bg-purple-500/20 px-2 py-1 rounded-full">Today</span>
+                            </div>
+                            <div className="text-3xl font-bold text-white mb-2">{stats.todayAttendance}</div>
+                            <div className="text-sm text-slate-400">Attendance Marked</div>
+                        </div>
+
+                        <div className="bg-gradient-to-br from-slate-800 to-slate-900 p-6 rounded-xl border border-slate-700 hover:border-amber-500/50 transition-all">
+                            <div className="flex items-center justify-between mb-4">
+                                <Icon icon="Activity" className="w-8 h-8 text-amber-400" />
+                                <span className="text-xs text-amber-400 bg-amber-500/20 px-2 py-1 rounded-full animate-pulse">Live</span>
+                            </div>
+                            <div className="text-3xl font-bold text-white mb-2">{stats.activeNow}</div>
+                            <div className="text-sm text-slate-400">Staff Active Now</div>
+                        </div>
+                    </div>
+
+                    <div className="bg-gradient-to-br from-slate-800 to-slate-900 p-6 rounded-xl border border-slate-700">
+                        <div className="flex items-center justify-between mb-6">
+                            <div className="flex items-center gap-3">
+                                <Icon icon="Activity" className="w-6 h-6 text-emerald-400" />
+                                <h2 className="text-xl font-bold text-white">Live Activity Feed</h2>
+                                <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></span>
+                            </div>
+                            <span className="text-xs text-slate-400">Updates every 8 seconds</span>
+                        </div>
+
+                        <div className="space-y-3 max-h-[500px] overflow-y-auto custom-scrollbar">
+                            {liveActivities.map((activity, index) => (
+                                <div 
+                                    key={activity.id}
+                                    className={`flex items-start gap-4 p-4 rounded-lg border ${getActivityColor(activity.type)} hover:scale-[1.02] transition-all ${index === 0 ? 'animate-slideIn' : ''}`}
+                                >
+                                    <div className="w-10 h-10 bg-slate-900/50 rounded-lg flex items-center justify-center text-lg font-bold border border-slate-700">
+                                        {getActivityIcon(activity.type)}
+                                    </div>
+                                    <div className="flex-1">
+                                        <div className="flex items-start justify-between">
+                                            <div>
+                                                <div className="font-semibold text-white">{activity.name}</div>
+                                                <div className="text-sm text-slate-300 mt-1">{activity.action}</div>
+                                            </div>
+                                            <div className="text-right">
+                                                <div className="text-xs font-mono text-slate-400">{activity.time}</div>
+                                                <div className="text-xs text-slate-500 mt-1">{activity.staffId}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            );
+
+            const renderManageUsers = () => (
+                <div className="space-y-6">
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-2xl font-bold text-white">Manage Staff</h2>
+                        <button className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all">
+                            <Icon icon="Plus" className="w-4 h-4" />
+                            Add Staff
+                        </button>
+                    </div>
+
+                    <div className="bg-gradient-to-br from-slate-800 to-slate-900 p-4 rounded-xl border border-slate-700">
+                        <div className="relative">
+                            <Icon icon="Search" className="w-5 h-5 text-slate-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+                            <input
+                                type="text"
+                                placeholder="Search by name, email, or staff ID..."
+                                className="w-full bg-slate-900 text-white pl-10 pr-4 py-3 rounded-lg border border-slate-700 focus:border-emerald-500 focus:outline-none"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl border border-slate-700 overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <table className="w-full">
+                                <thead className="bg-slate-900 border-b border-slate-700">
+                                    <tr>
+                                        <th className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase">Staff ID</th>
+                                        <th className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase">Name</th>
+                                        <th className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase">Email</th>
+                                        <th className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase">Department</th>
+                                        <th className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase">Role</th>
+                                        <th className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase">Status</th>
+                                        <th className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-700">
+                                    {users.filter(user => 
+                                        user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                        user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                        user.staffId.toLowerCase().includes(searchQuery.toLowerCase())
+                                    ).map((user) => (
+                                        <tr key={user.id} className="hover:bg-slate-900/50 transition-colors">
+                                            <td className="px-6 py-4 text-sm font-mono text-emerald-400">{user.staffId}</td>
+                                            <td className="px-6 py-4 text-sm text-white font-medium">{user.name}</td>
+                                            <td className="px-6 py-4 text-sm text-slate-300">{user.email}</td>
+                                            <td className="px-6 py-4 text-sm text-slate-300">{user.department}</td>
+                                            <td className="px-6 py-4 text-sm">
+                                                <span className="bg-blue-500/20 text-blue-400 px-3 py-1 rounded-full text-xs border border-blue-500/30">
+                                                    {user.role}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 text-sm">
+                                                <span className={`px-3 py-1 rounded-full text-xs border ${
+                                                    user.status === 'Active' 
+                                                        ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' 
+                                                        : 'bg-red-500/20 text-red-400 border-red-500/30'
+                                                }`}>
+                                                    {user.status}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 text-sm">
+                                                <div className="flex items-center gap-2">
+                                                    <button className="p-2 hover:bg-slate-700 rounded-lg transition-colors">
+                                                        <Icon icon="Edit" className="w-4 h-4 text-amber-400" />
+                                                    </button>
+                                                    <button className="p-2 hover:bg-slate-700 rounded-lg transition-colors">
+                                                        <Icon icon="Trash2" className="w-4 h-4 text-red-400" />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            );
+
+            const renderManageStudents = () => (
+                <div className="space-y-6">
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-2xl font-bold text-white">Manage Students</h2>
+                        <div className="flex gap-3">
+                            <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all">
+                                <Icon icon="Download" className="w-4 h-4" />
+                                Import
+                            </button>
+                            <button className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all">
+                                <Icon icon="Plus" className="w-4 h-4" />
+                                Add Student
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="bg-gradient-to-br from-slate-800 to-slate-900 p-4 rounded-xl border border-slate-700">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="relative">
+                                <Icon icon="Search" className="w-5 h-5 text-slate-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+                                <input
+                                    type="text"
+                                    placeholder="Search students..."
+                                    className="w-full bg-slate-900 text-white pl-10 pr-4 py-3 rounded-lg border border-slate-700 focus:border-blue-500 focus:outline-none"
+                                />
+                            </div>
+                            <div className="flex gap-3">
+                                <select className="flex-1 bg-slate-900 text-white px-4 py-3 rounded-lg border border-slate-700 focus:border-blue-500 focus:outline-none">
+                                    <option>All Branches</option>
+                                    <option>CSE</option>
+                                    <option>EEE</option>
+                                    <option>MECH</option>
+                                    <option>IT</option>
+                                </select>
+                                <select className="flex-1 bg-slate-900 text-white px-4 py-3 rounded-lg border border-slate-700 focus:border-blue-500 focus:outline-none">
+                                    <option>All Years</option>
+                                    <option>I</option>
+                                    <option>II</option>
+                                    <option>III</option>
+                                    <option>IV</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl border border-slate-700 overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <table className="w-full">
+                                <thead className="bg-slate-900 border-b border-slate-700">
+                                    <tr>
+                                        <th className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase">Register No</th>
+                                        <th className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase">Name</th>
+                                        <th className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase">Branch</th>
+                                        <th className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase">Year</th>
+                                        <th className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase">Admission Year</th>
+                                        <th className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase">Status</th>
+                                        <th className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-700">
+                                    {students.map((student) => (
+                                        <tr key={student.id} className="hover:bg-slate-900/50 transition-colors">
+                                            <td className="px-6 py-4 text-sm font-mono text-blue-400">{student.registerNo}</td>
+                                            <td className="px-6 py-4 text-sm text-white font-medium">{student.name}</td>
+                                            <td className="px-6 py-4 text-sm text-slate-300">{student.branch}</td>
+                                            <td className="px-6 py-4 text-sm text-slate-300">{student.academicYear}</td>
+                                            <td className="px-6 py-4 text-sm text-slate-300">{student.admissionYear}</td>
+                                            <td className="px-6 py-4 text-sm">
+                                                <span className="bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full text-xs border border-emerald-500/30">
+                                                    {student.status}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 text-sm">
+                                                <div className="flex items-center gap-2">
+                                                    <button className="p-2 hover:bg-slate-700 rounded-lg transition-colors">
+                                                        <Icon icon="Edit" className="w-4 h-4 text-amber-400" />
+                                                    </button>
+                                                    <button className="p-2 hover:bg-slate-700 rounded-lg transition-colors">
+                                                        <Icon icon="Trash2" className="w-4 h-4 text-red-400" />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            );
+
+            const renderReports = () => (
+                <div className="space-y-6">
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-2xl font-bold text-white">Reports & Analytics</h2>
+                        <button className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all">
+                            <Icon icon="Download" className="w-4 h-4" />
+                            Export Report
+                        </button>
+                    </div>
+
+                    <div className="bg-gradient-to-br from-slate-800 to-slate-900 p-6 rounded-xl border border-slate-700">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-300 mb-2">From Date</label>
+                                <input
+                                    type="date"
+                                    className="w-full bg-slate-900 text-white px-4 py-3 rounded-lg border border-slate-700 focus:border-purple-500 focus:outline-none"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-300 mb-2">To Date</label>
+                                <input
+                                    type="date"
+                                    className="w-full bg-slate-900 text-white px-4 py-3 rounded-lg border border-slate-700 focus:border-purple-500 focus:outline-none"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-300 mb-2">Branch</label>
+                                <select className="w-full bg-slate-900 text-white px-4 py-3 rounded-lg border border-slate-700 focus:border-purple-500 focus:outline-none">
+                                    <option>All Branches</option>
+                                    <option>CSE</option>
+                                    <option>EEE</option>
+                                    <option>MECH</option>
+                                    <option>IT</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button className="mt-4 bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg transition-all">
+                            Generate Report
+                        </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="bg-gradient-to-br from-purple-900/50 to-slate-900 p-6 rounded-xl border border-purple-500/30">
+                            <div className="text-3xl font-bold text-white mb-2">95.2%</div>
+                            <div className="text-sm text-slate-300">Average Attendance</div>
+                        </div>
+                        <div className="bg-gradient-to-br from-blue-900/50 to-slate-900 p-6 rounded-xl border border-blue-500/30">
+                            <div className="text-3xl font-bold text-white mb-2">1,623</div>
+                            <div className="text-sm text-slate-300">Students Present Today</div>
+                        </div>
+                        <div className="bg-gradient-to-br from-emerald-900/50 to-slate-900 p-6 rounded-xl border border-emerald-500/30">
+                            <div className="text-3xl font-bold text-white mb-2">22</div>
+                            <div className="text-sm text-slate-300">Working Days This Month</div>
+                        </div>
+                    </div>
+
+                    <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl border border-slate-700 overflow-hidden">
+                        <div className="p-6 border-b border-slate-700">
+                            <h3 className="text-lg font-bold text-white">Attendance Summary</h3>
+                        </div>
+                        <div className="overflow-x-auto">
+                            <table className="w-full">
+                                <thead className="bg-slate-900 border-b border-slate-700">
+                                    <tr>
+                                        <th className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase">Branch</th>
+                                        <th className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase">Total Students</th>
+                                        <th className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase">Present</th>
+                                        <th className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase">Absent</th>
+                                        <th className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase">Percentage</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-700">
+                                    {['CSE', 'EEE', 'MECH', 'IT', 'CIVIL'].map((branch, index) => (
+                                        <tr key={branch} className="hover:bg-slate-900/50 transition-colors">
+                                            <td className="px-6 py-4 text-sm text-white font-medium">{branch}</td>
+                                            <td className="px-6 py-4 text-sm text-slate-300">{320 + index * 50}</td>
+                                            <td className="px-6 py-4 text-sm text-emerald-400">{300 + index * 45}</td>
+                                            <td className="px-6 py-4 text-sm text-red-400">{20 + index * 5}</td>
+                                            <td className="px-6 py-4 text-sm">
+                                                <span className="text-purple-400 font-semibold">{94 + index}%</span>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            );
+
+            return (
+                <div className="min-h-screen bg-slate-950">
+                    <header className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-b border-slate-700 sticky top-0 z-50 backdrop-blur-lg bg-opacity-90">
+                        <div className="px-6 py-4">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-blue-600 rounded-xl flex items-center justify-center">
+                                        <Icon icon="Shield" className="w-7 h-7 text-white" />
+                                    </div>
+                                    <div>
+                                        <h1 className="text-xl font-bold text-white">Admin Control Panel</h1>
+                                        <p className="text-xs text-slate-400">PGP Colleges Management System</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                    <div className="flex items-center gap-2 text-sm text-slate-300">
+                                        <Icon icon="Clock" className="w-4 h-4" />
+                                        <span>{new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}</span>
+                                    </div>
+                                    <div className="flex items-center gap-3 bg-slate-800 px-4 py-2 rounded-lg border border-slate-700">
+                                        <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-blue-600 rounded-full flex items-center justify-center">
+                                            <Icon icon="User" className="w-5 h-5 text-white" />
+                                        </div>
+                                        <div>
+                                            <div className="text-sm font-semibold text-white">Admin</div>
+                                            <div className="text-xs text-slate-400">Administrator</div>
+                                        </div>
+                                    </div>
+                                    <button className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-all">
+                                        Logout
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </header>
+
+                    <div className="flex">
+                        <aside className="w-64 bg-gradient-to-b from-slate-900 to-slate-950 border-r border-slate-800 min-h-[calc(100vh-73px)] sticky top-[73px]">
+                            <nav className="p-4 space-y-2">
+                                <button
+                                    onClick={() => setCurrentPage('dashboard')}
+                                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
+                                        currentPage === 'dashboard'
+                                            ? 'bg-gradient-to-r from-emerald-600 to-blue-600 text-white shadow-lg shadow-emerald-500/20'
+                                            : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                                    }`}
+                                >
+                                    <Icon icon="Home" className="w-5 h-5" />
+                                    <span className="font-medium">Dashboard</span>
+                                </button>
+
+                                <button
+                                    onClick={() => setCurrentPage('users')}
+                                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
+                                        currentPage === 'users'
+                                            ? 'bg-gradient-to-r from-emerald-600 to-blue-600 text-white shadow-lg shadow-emerald-500/20'
+                                            : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                                    }`}
+                                >
+                                    <Icon icon="Users" className="w-5 h-5" />
+                                    <span className="font-medium">Manage Staff</span>
+                                </button>
+
+                                <button
+                                    onClick={() => setCurrentPage('students')}
+                                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
+                                        currentPage === 'students'
+                                            ? 'bg-gradient-to-r from-emerald-600 to-blue-600 text-white shadow-lg shadow-emerald-500/20'
+                                            : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                                    }`}
+                                >
+                                    <Icon icon="GraduationCap" className="w-5 h-5" />
+                                    <span className="font-medium">Manage Students</span>
+                                </button>
+
+                                <button
+                                    onClick={() => setCurrentPage('reports')}
+                                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
+                                        currentPage === 'reports'
+                                            ? 'bg-gradient-to-r from-emerald-600 to-blue-600 text-white shadow-lg shadow-emerald-500/20'
+                                            : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                                    }`}
+                                >
+                                    <Icon icon="BarChart3" className="w-5 h-5" />
+                                    <span className="font-medium">Reports</span>
+                                </button>
+                            </nav>
+
+                            <div className="p-4 mt-8">
+                                <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
+                                    <div className="text-xs text-slate-400 mb-2">System Status</div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
+                                        <span className="text-sm text-emerald-400 font-semibold">All Systems Operational</span>
+                                    </div>
+                                    <div className="mt-3 space-y-2 text-xs text-slate-500">
+                                        <div className="flex justify-between">
+                                            <span>Database</span>
+                                            <span className="text-emerald-400">Online</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span>API Server</span>
+                                            <span className="text-emerald-400">Online</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span>Backup</span>
+                                            <span className="text-emerald-400">Active</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </aside>
+
+                        <main className="flex-1 p-8 max-w-[1600px]">
+                            {currentPage === 'dashboard' && renderDashboard()}
+                            {currentPage === 'users' && renderManageUsers()}
+                            {currentPage === 'students' && renderManageStudents()}
+                            {currentPage === 'reports' && renderReports()}
+                        </main>
+                    </div>
+
+                    <footer className="bg-slate-900 border-t border-slate-800 py-4 text-center text-sm text-slate-400">
+                        <p>© 2025 PGP Colleges. All rights reserved. | Admin Panel v2.0</p>
+                    </footer>
+                </div>
+            );
+        };
+
+        // Render the app
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<AdminDashboard />);
+
+        // Initialize Lucide icons after render
+        lucide.createIcons();
     </script>
 </body>
 </html>

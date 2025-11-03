@@ -219,6 +219,10 @@ app.get('/view-reports', requireAuth, (req, res) => {
     res.render('dashboard');
 });
 
+app.get('/admin-dashboard', (req, res) => {
+    res.render('admin-dashboard');
+});
+
 // Login page should be accessible without auth
 app.get('/login', (req, res) => {
     res.render('login');
