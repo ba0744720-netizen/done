@@ -143,6 +143,13 @@ const startServer = async () => {
 // 🌐 API ROUTES
 // ========================================
 
+// Add Supabase client at the top
+const { createClient } = require('@supabase/supabase-js');
+const supabase = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_ANON_KEY
+);
+
 // Import routes
 const authRoutes = require("./routes/auth");
 const attendanceRoutes = require("./routes/attendance");
