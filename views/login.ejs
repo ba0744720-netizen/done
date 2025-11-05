@@ -812,7 +812,7 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
 });
 
         // ============================================
-// REGISTRATION HANDLER - FIXED VERSION
+// REGISTRATION HANDLER - TRIGGER-BASED VERSION
 // ============================================
 document.getElementById('registerForm').addEventListener('submit', async function(e) {
     e.preventDefault();
@@ -857,7 +857,7 @@ document.getElementById('registerForm').addEventListener('submit', async functio
         console.log('📝 Starting registration for:', email);
 
         // Check if staff ID already exists
-        const { data: existingStaff, error: checkError } = await supabase
+        const { data: existingStaff } = await supabase
             .from('teachers')
             .select('staff_id')
             .eq('staff_id', staffId)
@@ -867,7 +867,8 @@ document.getElementById('registerForm').addEventListener('submit', async functio
             throw new Error('Staff ID already exists. Please use a different Staff ID.');
         }
 
-        // ✅ FIXED: Create auth user with metadata
+        // ✅ SIMPLIFIED: Just create the auth user with metadata
+        // The database trigger will automatically create the teacher record
         const { data: authData, error: authError } = await supabase.auth.signUp({
             email: email,
             password: password,
@@ -890,35 +891,8 @@ document.getElementById('registerForm').addEventListener('submit', async functio
             throw new Error('User creation failed - no user returned');
         }
 
-        console.log('✅ Auth user created:', authData.user.id);
-
-        // ✅ CRITICAL FIX: Insert teacher record WITHOUT signing in first
-        // This works because the insert happens in the same transaction
-        const { data: teacherData, error: teacherError } = await supabase
-            .from('teachers')
-            .insert([{
-                user_id: authData.user.id,
-                staff_id: staffId,
-                name: name,
-                email: email,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-            }])
-            .select()
-            .single();
-
-        if (teacherError) {
-            console.error('❌ Teacher insert error:', teacherError);
-            
-            // Clean up: delete the auth user if teacher creation fails
-            console.log('🧹 Cleaning up auth user...');
-            await supabase.auth.admin.deleteUser(authData.user.id);
-            
-            throw new Error('Failed to create teacher record: ' + teacherError.message);
-        }
-
-        console.log('✅ Teacher record created:', teacherData);
-        console.log('✅ Registration successful!');
+        console.log('✅ User created successfully!');
+        console.log('✅ Teacher record auto-created by database trigger');
 
         // Show success message
         alert('✅ Registration Successful!\n\n📧 Please check your email to verify your account.\n\nVerification link has been sent to:\n' + email + '\n\n💡 Check spam folder if not in inbox.\n\nAfter verification, you can login.');
@@ -944,8 +918,6 @@ document.getElementById('registerForm').addEventListener('submit', async functio
             errorMsg = '❌ Password is too weak. Use at least 6 characters.';
         } else if (error.message.includes('User already registered')) {
             errorMsg = '❌ This email is already registered!\n\n💡 Try logging in instead or use forgot password.';
-        } else if (error.message.includes('Failed to create teacher record')) {
-            errorMsg = '❌ ' + error.message + '\n\nPlease try again or contact support.';
         } else if (error.message) {
             errorMsg = '❌ ' + error.message;
         } else {
