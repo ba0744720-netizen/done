@@ -812,167 +812,153 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
 });
 
         // ============================================
-        // REGISTRATION HANDLER
-        // ============================================
-        document.getElementById('registerForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
+// REGISTRATION HANDLER - FIXED VERSION
+// ============================================
+document.getElementById('registerForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
 
-            const staffId = document.getElementById('regStaffId').value.trim();
-            const name = document.getElementById('regName').value.trim();
-            const email = document.getElementById('regEmail').value.trim();
-            const password = document.getElementById('regPassword').value;
-            const confirmPassword = document.getElementById('regConfirmPassword').value;
-            const registerBtn = document.querySelector('.register-btn');
+    const staffId = document.getElementById('regStaffId').value.trim();
+    const name = document.getElementById('regName').value.trim();
+    const email = document.getElementById('regEmail').value.trim();
+    const password = document.getElementById('regPassword').value;
+    const confirmPassword = document.getElementById('regConfirmPassword').value;
+    const registerBtn = document.querySelector('.register-btn');
 
-            regErrorMessage.classList.remove('show');
+    regErrorMessage.classList.remove('show');
 
-            // Validate passwords match
-            if (password !== confirmPassword) {
-                showError('❌ Passwords do not match!', true);
-                return;
-            }
+    // Validate passwords match
+    if (password !== confirmPassword) {
+        showError('❌ Passwords do not match!', true);
+        return;
+    }
 
-            // Validate password length (minimum 6 characters)
-            if (password.length < 6) {
-                showError('❌ Password must be at least 6 characters long!', true);
-                return;
-            }
+    // Validate password length
+    if (password.length < 6) {
+        showError('❌ Password must be at least 6 characters long!', true);
+        return;
+    }
 
-            // Validate staff ID
-            if (staffId.length < 3) {
-                showError('❌ Staff ID must be at least 3 characters!', true);
-                return;
-            }
+    // Validate staff ID
+    if (staffId.length < 3) {
+        showError('❌ Staff ID must be at least 3 characters!', true);
+        return;
+    }
 
-            // Validate name
-            if (name.length < 3) {
-                showError('❌ Name must be at least 3 characters!', true);
-                return;
-            }
+    // Validate name
+    if (name.length < 3) {
+        showError('❌ Name must be at least 3 characters!', true);
+        return;
+    }
 
-            registerBtn.textContent = 'Creating Account...';
-            registerBtn.disabled = true;
+    registerBtn.textContent = 'Creating Account...';
+    registerBtn.disabled = true;
 
-            try {
-                console.log('📝 Starting registration for:', email);
+    try {
+        console.log('📝 Starting registration for:', email);
 
-                // Check if staff ID already exists
-                const { data: existingStaff, error: checkError } = await supabase
-                    .from('teachers')
-                    .select('staff_id')
-                    .eq('staff_id', staffId)
-                    .maybeSingle();
+        // Check if staff ID already exists
+        const { data: existingStaff, error: checkError } = await supabase
+            .from('teachers')
+            .select('staff_id')
+            .eq('staff_id', staffId)
+            .maybeSingle();
 
-                if (existingStaff) {
-                    throw new Error('Staff ID already exists. Please use a different Staff ID.');
+        if (existingStaff) {
+            throw new Error('Staff ID already exists. Please use a different Staff ID.');
+        }
+
+        // ✅ FIXED: Create auth user with metadata
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+            email: email,
+            password: password,
+            options: {
+                emailRedirectTo: 'https://done-dd2c.onrender.com/auth/confirm',
+                data: {
+                    full_name: name,
+                    staff_id: staffId,
+                    role: 'teacher'
                 }
-
-                // Step 1: Create auth user in Supabase Auth
-                const { data: authData, error: authError } = await supabase.auth.signUp({
-                    email: email,
-                    password: password,
-                    options: {
-                        data: {
-                            full_name: name,
-                            staff_id: staffId
-                        },
-                              emailRedirectTo: 'https://done-dd2c.onrender.com/auth/confirm'  // ← CHANGE THIS
-    
-                    }
-                });
-
-                if (authError) {
-                    console.error('❌ Auth signup error:', authError);
-                    throw authError;
-                }
-
-                if (!authData.user) {
-                    throw new Error('User creation failed');
-                }
-
-                console.log('✅ Auth user created:', authData.user.id);
-
-                // Wait for Supabase to process
-                await new Promise(resolve => setTimeout(resolve, 2000));
-
-                // Step 2: Sign in to get authenticated session for RLS
-                const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-                    email: email,
-                    password: password
-                });
-
-                if (signInError) {
-                    console.error('❌ Sign in error:', signInError);
-                    throw new Error('Registration successful but auto-login failed. Please login manually.');
-                }
-
-                console.log('✅ User signed in after registration');
-
-                // Step 3: Save teacher details to teachers table (now with valid session)
-                const { data: teacherData, error: teacherError } = await supabase
-                    .from('teachers')
-                    .insert([{
-                        user_id: authData.user.id,
-                        staff_id: staffId,
-                        name: name,
-                        email: email,
-                        created_at: new Date().toISOString(),
-                        updated_at: new Date().toISOString()
-                    }])
-                    .select()
-                    .single();
-
-                if (teacherError) {
-                    console.error('❌ Teacher insert error:', teacherError);
-                    
-                    // Sign out the user if teacher record creation fails
-                    await supabase.auth.signOut();
-                    
-                    throw teacherError;
-                }
-
-                // Sign out after successful registration
-                await supabase.auth.signOut();
-
-                console.log('✅ Registration successful!');
-
-                // Show success message
-                alert('✅ Registration Successful!\n\n📧 Please check your email to verify your account.\n\nVerification link has been sent to:\n' + email + '\n\n💡 Check spam folder if not in inbox.\n\nAfter verification, you can login.');
-
-                // Close modal and fill in email
-                registerModal.classList.remove('show');
-                document.getElementById('registerForm').reset();
-                document.getElementById('email').value = email;
-                regErrorMessage.classList.remove('show');
-
-            } catch (error) {
-                console.error('❌ Registration error:', error);
-
-                let errorMsg = '❌ Registration failed. ';
-
-                if (error.message.includes('duplicate') || error.message.includes('already exists')) {
-                    errorMsg = '❌ This email or Staff ID is already registered!\n\n💡 Try logging in instead or use a different email/Staff ID.';
-                } else if (error.message.includes('Staff ID already exists')) {
-                    errorMsg = '❌ ' + error.message;
-                } else if (error.message.includes('invalid email')) {
-                    errorMsg = '❌ Please enter a valid email address!';
-                } else if (error.message.includes('password')) {
-                    errorMsg = '❌ Password is too weak. Use at least 6 characters.';
-                } else if (error.message.includes('User already registered')) {
-                    errorMsg = '❌ This email is already registered!\n\n💡 Try logging in instead or use forgot password.';
-                } else if (error.message) {
-                    errorMsg = '❌ ' + error.message;
-                } else {
-                    errorMsg += 'Please try again or contact support.';
-                }
-
-                showError(errorMsg, true);
-
-            } finally {
-                registerBtn.textContent = 'Register';
-                registerBtn.disabled = false;
             }
         });
+
+        if (authError) {
+            console.error('❌ Auth signup error:', authError);
+            throw authError;
+        }
+
+        if (!authData.user) {
+            throw new Error('User creation failed - no user returned');
+        }
+
+        console.log('✅ Auth user created:', authData.user.id);
+
+        // ✅ CRITICAL FIX: Insert teacher record WITHOUT signing in first
+        // This works because the insert happens in the same transaction
+        const { data: teacherData, error: teacherError } = await supabase
+            .from('teachers')
+            .insert([{
+                user_id: authData.user.id,
+                staff_id: staffId,
+                name: name,
+                email: email,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            }])
+            .select()
+            .single();
+
+        if (teacherError) {
+            console.error('❌ Teacher insert error:', teacherError);
+            
+            // Clean up: delete the auth user if teacher creation fails
+            console.log('🧹 Cleaning up auth user...');
+            await supabase.auth.admin.deleteUser(authData.user.id);
+            
+            throw new Error('Failed to create teacher record: ' + teacherError.message);
+        }
+
+        console.log('✅ Teacher record created:', teacherData);
+        console.log('✅ Registration successful!');
+
+        // Show success message
+        alert('✅ Registration Successful!\n\n📧 Please check your email to verify your account.\n\nVerification link has been sent to:\n' + email + '\n\n💡 Check spam folder if not in inbox.\n\nAfter verification, you can login.');
+
+        // Close modal and fill in email
+        registerModal.classList.remove('show');
+        document.getElementById('registerForm').reset();
+        document.getElementById('email').value = email;
+        regErrorMessage.classList.remove('show');
+
+    } catch (error) {
+        console.error('❌ Registration error:', error);
+
+        let errorMsg = '❌ Registration failed. ';
+
+        if (error.message.includes('duplicate') || error.message.includes('already exists')) {
+            errorMsg = '❌ This email or Staff ID is already registered!\n\n💡 Try logging in instead or use a different email/Staff ID.';
+        } else if (error.message.includes('Staff ID already exists')) {
+            errorMsg = '❌ ' + error.message;
+        } else if (error.message.includes('invalid email')) {
+            errorMsg = '❌ Please enter a valid email address!';
+        } else if (error.message.includes('password')) {
+            errorMsg = '❌ Password is too weak. Use at least 6 characters.';
+        } else if (error.message.includes('User already registered')) {
+            errorMsg = '❌ This email is already registered!\n\n💡 Try logging in instead or use forgot password.';
+        } else if (error.message.includes('Failed to create teacher record')) {
+            errorMsg = '❌ ' + error.message + '\n\nPlease try again or contact support.';
+        } else if (error.message) {
+            errorMsg = '❌ ' + error.message;
+        } else {
+            errorMsg += 'Please try again or contact support.';
+        }
+
+        showError(errorMsg, true);
+
+    } finally {
+        registerBtn.textContent = 'Register';
+        registerBtn.disabled = false;
+    }
+});
 
         // ============================================
         // FORGOT PASSWORD HANDLER
