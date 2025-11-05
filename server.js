@@ -173,7 +173,43 @@ if (adminRoutes) {
 // ========================================
 // 📄 PAGE ROUTES - UPDATED FOR SUPABASE AUTH
 // ========================================
+// Add this route BEFORE your other routes
+app.get('/auth/confirm', async (req, res) => {
+  const { token_hash, type } = req.query;
 
+  if (!token_hash || !type) {
+    return res.render('error', { 
+      message: 'Invalid confirmation link' 
+    });
+  }
+
+  try {
+    // Verify the OTP token with Supabase
+    const { data, error } = await supabase.auth.verifyOtp({
+      token_hash,
+      type,
+    });
+
+    if (error) {
+      console.error('Confirmation error:', error);
+      return res.render('error', { 
+        message: 'Failed to confirm email. Please try again.' 
+      });
+    }
+
+    // Success - render confirmation page
+    res.render('auth-confirm', { 
+      message: 'Email confirmed successfully!',
+      success: true 
+    });
+
+  } catch (error) {
+    console.error('Server error:', error);
+    res.render('error', { 
+      message: 'Something went wrong. Please try again.' 
+    });
+  }
+});
 // Middleware to check Supabase authentication
 async function requireAuth(req, res, next) {
     try {
