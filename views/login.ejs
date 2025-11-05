@@ -812,7 +812,7 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
 });
 
         // ============================================
-// REGISTRATION HANDLER - TRIGGER-BASED VERSION
+// ✅ REGISTRATION HANDLER - FIXED VERSION
 // ============================================
 document.getElementById('registerForm').addEventListener('submit', async function(e) {
     e.preventDefault();
@@ -856,29 +856,43 @@ document.getElementById('registerForm').addEventListener('submit', async functio
     try {
         console.log('📝 Starting registration for:', email);
 
-        // Check if staff ID already exists
-        const { data: existingStaff } = await supabase
+        // ✅ FIX 1: Check if staff ID already exists in teachers table
+        const { data: existingStaff, error: staffCheckError } = await supabase
             .from('teachers')
             .select('staff_id')
             .eq('staff_id', staffId)
             .maybeSingle();
 
+        if (staffCheckError) {
+            console.warn('Staff check error (might be expected):', staffCheckError);
+        }
+
         if (existingStaff) {
             throw new Error('Staff ID already exists. Please use a different Staff ID.');
         }
 
-        // ✅ SIMPLIFIED: Just create the auth user with metadata
-        // The database trigger will automatically create the teacher record
+        // ✅ FIX 2: Check if email already exists in teachers table
+        const { data: existingEmail } = await supabase
+            .from('teachers')
+            .select('email')
+            .eq('email', email)
+            .maybeSingle();
+
+        if (existingEmail) {
+            throw new Error('Email already registered. Please use a different email or login.');
+        }
+
+        // ✅ FIX 3: Create auth user with proper metadata
         const { data: authData, error: authError } = await supabase.auth.signUp({
             email: email,
             password: password,
             options: {
-                emailRedirectTo: 'https://done-dd2c.onrender.com/auth/confirm',
                 data: {
                     full_name: name,
                     staff_id: staffId,
                     role: 'teacher'
-                }
+                },
+                emailRedirectTo: window.location.origin + '/auth/confirm'
             }
         });
 
@@ -891,11 +905,50 @@ document.getElementById('registerForm').addEventListener('submit', async functio
             throw new Error('User creation failed - no user returned');
         }
 
-        console.log('✅ User created successfully!');
-        console.log('✅ Teacher record auto-created by database trigger');
+        console.log('✅ Auth user created:', authData.user.id);
 
-        // Show success message
-        alert('✅ Registration Successful!\n\n📧 Please check your email to verify your account.\n\nVerification link has been sent to:\n' + email + '\n\n💡 Check spam folder if not in inbox.\n\nAfter verification, you can login.');
+        // ✅ FIX 4: MANUALLY CREATE TEACHER RECORD (Backup method)
+        try {
+            const { data: teacherData, error: teacherError } = await supabase
+                .from('teachers')
+                .insert([
+                    {
+                        user_id: authData.user.id,
+                        staff_id: staffId,
+                        name: name,
+                        email: email,
+                        created_at: new Date().toISOString()
+                    }
+                ])
+                .select()
+                .single();
+
+            if (teacherError) {
+                console.warn('Teacher creation error (might be duplicate):', teacherError);
+                // Don't throw error here - trigger might have already created it
+            } else {
+                console.log('✅ Teacher record created manually:', teacherData);
+            }
+        } catch (insertError) {
+            console.warn('Teacher insert warning:', insertError);
+            // Continue even if manual insert fails (trigger might handle it)
+        }
+
+        // ✅ FIX 5: Show proper success message
+        const successHTML = `
+            ✅ Registration Successful!
+            
+            📧 Verification email sent to: ${email}
+            
+            💡 Please check:
+            • Inbox for verification link
+            • Spam folder if not found
+            • Verify email before logging in
+            
+            After verification, you can login with your credentials.
+        `;
+
+        alert(successHTML);
 
         // Close modal and fill in email
         registerModal.classList.remove('show');
@@ -912,16 +965,18 @@ document.getElementById('registerForm').addEventListener('submit', async functio
             errorMsg = '❌ This email or Staff ID is already registered!\n\n💡 Try logging in instead or use a different email/Staff ID.';
         } else if (error.message.includes('Staff ID already exists')) {
             errorMsg = '❌ ' + error.message;
+        } else if (error.message.includes('Email already registered')) {
+            errorMsg = '❌ ' + error.message;
         } else if (error.message.includes('invalid email')) {
             errorMsg = '❌ Please enter a valid email address!';
         } else if (error.message.includes('password')) {
             errorMsg = '❌ Password is too weak. Use at least 6 characters.';
         } else if (error.message.includes('User already registered')) {
             errorMsg = '❌ This email is already registered!\n\n💡 Try logging in instead or use forgot password.';
-        } else if (error.message) {
-            errorMsg = '❌ ' + error.message;
+        } else if (error.message.includes('rate limit')) {
+            errorMsg = '❌ Too many attempts. Please try again in a few minutes.';
         } else {
-            errorMsg += 'Please try again or contact support.';
+            errorMsg += '\n\nError: ' + error.message;
         }
 
         showError(errorMsg, true);
