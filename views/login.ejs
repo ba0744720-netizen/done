@@ -610,8 +610,13 @@
         const SUPABASE_URL = 'https://iaoladiqgfxjiijnaxuy.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlhb2xhZGlxZ2Z4amlpam5heHV5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5ODIzNTcsImV4cCI6MjA3NzU1ODM1N30.6A1_vyEgVOV9QbSwkmYXegcmq4SLPFukG5vbUJzyA5w';
         
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: {
+        redirectTo: 'https://done-dd2c.onrender.com/auth/confirm',
+        autoRefreshToken: true,
+        persistSession: true,
+    }
+});
         // ============================================
         // DOM ELEMENTS
         // ============================================
