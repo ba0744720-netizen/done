@@ -602,505 +602,223 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-    <script>
-        // ============================================
-        // SUPABASE CONFIGURATION
-        // ============================================
-        const SUPABASE_URL = 'https://iaoladiqgfxjiijnaxuy.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlhb2xhZGlxZ2Z4amlpam5heHV5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5ODIzNTcsImV4cCI6MjA3NzU1ODM1N30.6A1_vyEgVOV9QbSwkmYXegcmq4SLPFukG5vbUJzyA5w';
-        
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    auth: {
-        redirectTo: 'https://done-dd2c.onrender.com/auth/confirm',
-        autoRefreshToken: true,
-        persistSession: true,
-    }
-});
-        // ============================================
-        // DOM ELEMENTS
-        // ============================================
-        const errorMessage = document.getElementById('errorMessage');
-        const successMessage = document.getElementById('successMessage');
-        const regErrorMessage = document.getElementById('regErrorMessage');
-        const passwordInput = document.getElementById('password');
-        const togglePassword = document.getElementById('togglePassword');
-        const registerModal = document.getElementById('registerModal');
-        const registerLink = document.getElementById('registerLink');
-        const closeRegister = document.getElementById('closeRegister');
-        const forgotPasswordLink = document.getElementById('forgotPasswordLink');
+    <<script>
+    // ============================================
+    // DOM ELEMENTS
+    // ============================================
+    const errorMessage = document.getElementById('errorMessage');
+    const passwordInput = document.getElementById('password');
+    const togglePassword = document.getElementById('togglePassword');
+    const registerModal = document.getElementById('registerModal');
+    const registerLink = document.getElementById('registerLink');
+    const closeRegister = document.getElementById('closeRegister');
 
-        // ============================================
-        // PASSWORD VISIBILITY TOGGLES
-        // ============================================
-        function setupPasswordToggle(toggleBtn, inputField) {
-            toggleBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                const type = inputField.type === 'password' ? 'text' : 'password';
-                inputField.type = type;
-                const icon = toggleBtn.querySelector('svg');
-                if(type === 'password') {
-                    icon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
-                } else {
-                    icon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1 4.24 4.24"/><line x1="1" y1="1" x2="23" y2="23"/>';
-                }
+    // ============================================
+    // PASSWORD VISIBILITY TOGGLES
+    // ============================================
+    function setupPasswordToggle(toggleBtn, inputField) {
+        toggleBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const type = inputField.type === 'password' ? 'text' : 'password';
+            inputField.type = type;
+            const icon = toggleBtn.querySelector('svg');
+            if(type === 'password') {
+                icon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+            } else {
+                icon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>';
+            }
+        });
+    }
+
+    setupPasswordToggle(togglePassword, passwordInput);
+    setupPasswordToggle(document.getElementById('toggleRegPassword'), document.getElementById('regPassword'));
+    setupPasswordToggle(document.getElementById('toggleRegConfirmPassword'), document.getElementById('regConfirmPassword'));
+
+    // ============================================
+    // MODAL CONTROLS
+    // ============================================
+    registerLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        registerModal.classList.add('show');
+    });
+
+    closeRegister.addEventListener('click', () => {
+        registerModal.classList.remove('show');
+    });
+
+    registerModal.addEventListener('click', (e) => {
+        if(e.target === registerModal) {
+            registerModal.classList.remove('show');
+        }
+    });
+
+    // ============================================
+    // SHOW ERROR MESSAGE
+    // ============================================
+    function showError(message) {
+        errorMessage.textContent = message;
+        errorMessage.classList.add('show');
+        document.body.classList.add('error-state');
+        
+        setTimeout(() => {
+            document.body.classList.remove('error-state');
+        }, 300);
+
+        setTimeout(() => {
+            errorMessage.classList.remove('show');
+        }, 5000);
+    }
+
+    // ============================================
+    // LOGIN HANDLER - USING YOUR BACKEND API
+    // ============================================
+    document.getElementById('loginForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const email = document.getElementById('email').value.trim();
+        const password = document.getElementById('password').value;
+        const rememberMe = document.getElementById('remember').checked;
+        const loginBtn = document.querySelector('.login-btn');
+
+        errorMessage.classList.remove('show');
+        loginBtn.textContent = 'Logging in...';
+        loginBtn.disabled = true;
+
+        try {
+            console.log('🔐 Attempting login for:', email);
+
+            // Call your backend auth API
+            const response = await fetch('/auth/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email, password })
             });
+
+            const data = await response.json();
+
+            if (!data.success) {
+                throw new Error(data.message || 'Login failed');
+            }
+
+            console.log('✅ Login successful!', data);
+
+            // Store token in localStorage
+            localStorage.setItem('auth_token', data.token);
+            localStorage.setItem('user_data', JSON.stringify(data.user));
+
+            if (rememberMe) {
+                localStorage.setItem('rememberEmail', email);
+            } else {
+                localStorage.removeItem('rememberEmail');
+            }
+
+            // Redirect to dashboard
+            window.location.href = '/dashboard';
+
+        } catch (error) {
+            console.error('❌ Login error:', error);
+            showError(error.message || 'Login failed. Please try again.');
+            loginBtn.textContent = 'Login';
+            loginBtn.disabled = false;
+        }
+    });
+
+    // ============================================
+    // REGISTRATION HANDLER - USING YOUR BACKEND API
+    // ============================================
+    document.getElementById('registerForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const staffId = document.getElementById('regStaffId').value.trim();
+        const name = document.getElementById('regName').value.trim();
+        const email = document.getElementById('regEmail').value.trim();
+        const password = document.getElementById('regPassword').value;
+        const confirmPassword = document.getElementById('regConfirmPassword').value;
+        const registerBtn = document.querySelector('.register-btn');
+
+        // Validate passwords match
+        if (password !== confirmPassword) {
+            alert('❌ Passwords do not match!');
+            return;
         }
 
-        setupPasswordToggle(togglePassword, passwordInput);
-        setupPasswordToggle(document.getElementById('toggleRegPassword'), document.getElementById('regPassword'));
-        setupPasswordToggle(document.getElementById('toggleRegConfirmPassword'), document.getElementById('regConfirmPassword'));
+        // Validate password strength
+        if (password.length < 6) {
+            alert('❌ Password must be at least 6 characters long');
+            return;
+        }
 
-        // ============================================
-        // MODAL CONTROLS
-        // ============================================
-        registerLink.addEventListener('click', (e) => {
-            e.preventDefault();
-            registerModal.classList.add('show');
-            regErrorMessage.classList.remove('show');
-        });
+        registerBtn.textContent = 'Creating Account...';
+        registerBtn.disabled = true;
 
-        closeRegister.addEventListener('click', () => {
+        try {
+            console.log('📝 Attempting registration for:', email);
+
+            // Call your backend registration API
+            const response = await fetch('/auth/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ 
+                    staffId, 
+                    name, 
+                    email, 
+                    password 
+                })
+            });
+
+            const data = await response.json();
+
+            if (!data.success) {
+                throw new Error(data.message || 'Registration failed');
+            }
+
+            console.log('✅ Registration successful!', data);
+
+            alert('✅ Registration successful!\n\n🎉 You can now login with your credentials.');
+
+            // Close modal and fill in email
             registerModal.classList.remove('show');
             document.getElementById('registerForm').reset();
-            regErrorMessage.classList.remove('show');
-        });
+            document.getElementById('email').value = email;
 
-        registerModal.addEventListener('click', (e) => {
-            if(e.target === registerModal) {
-                registerModal.classList.remove('show');
-                document.getElementById('registerForm').reset();
-                regErrorMessage.classList.remove('show');
-            }
-        });
+        } catch (error) {
+            console.error('❌ Registration error:', error);
+            alert('❌ Registration failed: ' + error.message);
+        } finally {
+            registerBtn.textContent = 'Register';
+            registerBtn.disabled = false;
+        }
+    });
 
-        // ============================================
-        // SHOW MESSAGES
-        // ============================================
-        function showError(message, isRegister = false) {
-            const msgEl = isRegister ? regErrorMessage : errorMessage;
-            msgEl.textContent = message;
-            msgEl.classList.add('show');
-            
-            if (!isRegister) {
-                document.body.classList.add('error-state');
-                setTimeout(() => {
-                    document.body.classList.remove('error-state');
-                }, 300);
-            }
-
-            setTimeout(() => {
-                msgEl.classList.remove('show');
-            }, 8000);
+    // ============================================
+    // LOAD REMEMBERED EMAIL AND CHECK SESSION
+    // ============================================
+    window.addEventListener('load', function() {
+        const rememberedEmail = localStorage.getItem('rememberEmail');
+        if (rememberedEmail) {
+            document.getElementById('email').value = rememberedEmail;
+            document.getElementById('remember').checked = true;
         }
 
-        function showSuccess(message) {
-            successMessage.textContent = message;
-            successMessage.classList.add('show');
-            errorMessage.classList.remove('show');
-
-            setTimeout(() => {
-                successMessage.classList.remove('show');
-            }, 5000);
-        }
-
-// ============================================
-// LOGIN HANDLER - TEACHERS ONLY (FIXED VERSION)
-// ============================================
-document.getElementById('loginForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
-
-    const email = document.getElementById('email').value.trim();
-    const password = document.getElementById('password').value;
-    const rememberMe = document.getElementById('remember').checked;
-    const loginBtn = document.querySelector('.login-btn');
-
-    errorMessage.classList.remove('show');
-    successMessage.classList.remove('show');
-    loginBtn.textContent = 'Logging in...';
-    loginBtn.disabled = true;
-
-    try {
-        console.log('🔐 Attempting login for:', email);
-
-        // Sign in with Supabase Auth
-        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-            email: email,
-            password: password
-        });
-
-        if (authError) {
-            console.error('Auth error:', authError);
-            throw authError;
-        }
-
-        console.log('✅ Auth successful, user ID:', authData.user.id);
-
-        // IMPORTANT: Wait a bit for session to be properly established
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        // Check if user is TEACHER
-        const { data: teacherData, error: teacherError } = await supabase
-            .from('teachers')
-            .select('*')
-            .eq('user_id', authData.user.id)
-            .single();
-
-        if (teacherError && teacherError.code !== 'PGRST116') {
-            console.error('Teacher query error:', teacherError);
-        }
-
-        if (!teacherData) {
-            throw new Error('TEACHER_NOT_FOUND');
-        }
-
-        console.log('👨‍🏫 Teacher found:', teacherData.name);
-        
-        // Store session and user data
-        // CRITICAL: Store these in the correct order
-        localStorage.setItem('userRole', 'teacher');
-        localStorage.setItem('teacherName', teacherData.name);
-        localStorage.setItem('teacherId', teacherData.id);
-        localStorage.setItem('teacherEmail', email);
-        localStorage.setItem('staffId', teacherData.staff_id);
-        localStorage.setItem('userId', authData.user.id);
-        localStorage.setItem('access_token', authData.session.access_token);
-        localStorage.setItem('refresh_token', authData.session.refresh_token);
-        
-        if (rememberMe) {
-            localStorage.setItem('rememberEmail', email);
-        } else {
-            localStorage.removeItem('rememberEmail');
-        }
-
-        // CRITICAL: Set the session in Supabase's own storage
-        await supabase.auth.setSession({
-            access_token: authData.session.access_token,
-            refresh_token: authData.session.refresh_token
-        });
-
-        console.log('✅ Session established successfully');
-
-        showSuccess('✅ Login successful! Redirecting to dashboard...');
-        
-        // Wait a bit before redirect to ensure session is fully saved
-        setTimeout(() => {
+        // Check for existing auth token
+        const token = localStorage.getItem('auth_token');
+        if (token) {
+            // Redirect to dashboard if token exists
             window.location.href = '/dashboard';
-        }, 1500);
-
-    } catch (error) {
-        console.error('❌ Login error:', error);
-
-        let errorMsg = '❌ Login failed. Please try again.';
-        
-        if (error.message === 'TEACHER_NOT_FOUND') {
-            errorMsg = '❌ Teacher account not found!\n\nThis email is registered but not linked to a teacher account.\nPlease contact administrator.';
-        } else if (error.message.includes('Invalid login credentials')) {
-            errorMsg = '❌ Invalid email or password!\n\n💡 Make sure:\n• Email is correct\n• Password is correct';
-        } else if (error.message.includes('Too many requests')) {
-            errorMsg = '⏳ Too many login attempts.\n\nPlease try again in a few minutes.';
-        } else if (error.message) {
-            errorMsg = '❌ ' + error.message;
         }
+    });
 
-        showError(errorMsg);
-
-    } finally {
-        loginBtn.textContent = 'Login';
-        loginBtn.disabled = false;
-    }
-});
-
-        // ============================================
-// ✅ REGISTRATION HANDLER - FIXED VERSION
-// ============================================
-document.getElementById('registerForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
-
-    const staffId = document.getElementById('regStaffId').value.trim();
-    const name = document.getElementById('regName').value.trim();
-    const email = document.getElementById('regEmail').value.trim();
-    const password = document.getElementById('regPassword').value;
-    const confirmPassword = document.getElementById('regConfirmPassword').value;
-    const registerBtn = document.querySelector('.register-btn');
-
-    regErrorMessage.classList.remove('show');
-
-    // Validate passwords match
-    if (password !== confirmPassword) {
-        showError('❌ Passwords do not match!', true);
-        return;
-    }
-
-    // Validate password length
-    if (password.length < 6) {
-        showError('❌ Password must be at least 6 characters long!', true);
-        return;
-    }
-
-    // Validate staff ID
-    if (staffId.length < 3) {
-        showError('❌ Staff ID must be at least 3 characters!', true);
-        return;
-    }
-
-    // Validate name
-    if (name.length < 3) {
-        showError('❌ Name must be at least 3 characters!', true);
-        return;
-    }
-
-    registerBtn.textContent = 'Creating Account...';
-    registerBtn.disabled = true;
-
-    try {
-        console.log('📝 Starting registration for:', email);
-
-        // ✅ FIX 1: Check if staff ID already exists in teachers table
-        const { data: existingStaff, error: staffCheckError } = await supabase
-            .from('teachers')
-            .select('staff_id')
-            .eq('staff_id', staffId)
-            .maybeSingle();
-
-        if (staffCheckError) {
-            console.warn('Staff check error (might be expected):', staffCheckError);
-        }
-
-        if (existingStaff) {
-            throw new Error('Staff ID already exists. Please use a different Staff ID.');
-        }
-
-        // ✅ FIX 2: Check if email already exists in teachers table
-        const { data: existingEmail } = await supabase
-            .from('teachers')
-            .select('email')
-            .eq('email', email)
-            .maybeSingle();
-
-        if (existingEmail) {
-            throw new Error('Email already registered. Please use a different email or login.');
-        }
-
-        // ✅ FIX 3: Create auth user with proper metadata
-        const { data: authData, error: authError } = await supabase.auth.signUp({
-            email: email,
-            password: password,
-            options: {
-                data: {
-                    full_name: name,
-                    staff_id: staffId,
-                    role: 'teacher'
-                },
-                emailRedirectTo: window.location.origin + '/auth/confirm'
-            }
-        });
-
-        if (authError) {
-            console.error('❌ Auth signup error:', authError);
-            throw authError;
-        }
-
-        if (!authData.user) {
-            throw new Error('User creation failed - no user returned');
-        }
-
-        console.log('✅ Auth user created:', authData.user.id);
-
-        // ✅ FIX 4: MANUALLY CREATE TEACHER RECORD (Backup method)
-        try {
-            const { data: teacherData, error: teacherError } = await supabase
-                .from('teachers')
-                .insert([
-                    {
-                        user_id: authData.user.id,
-                        staff_id: staffId,
-                        name: name,
-                        email: email,
-                        created_at: new Date().toISOString()
-                    }
-                ])
-                .select()
-                .single();
-
-            if (teacherError) {
-                console.warn('Teacher creation error (might be duplicate):', teacherError);
-                // Don't throw error here - trigger might have already created it
-            } else {
-                console.log('✅ Teacher record created manually:', teacherData);
-            }
-        } catch (insertError) {
-            console.warn('Teacher insert warning:', insertError);
-            // Continue even if manual insert fails (trigger might handle it)
-        }
-
-        // ✅ FIX 5: Show proper success message
-        const successHTML = `
-            ✅ Registration Successful!
-            
-            📧 Verification email sent to: ${email}
-            
-            💡 Please check:
-            • Inbox for verification link
-            • Spam folder if not found
-            • Verify email before logging in
-            
-            After verification, you can login with your credentials.
-        `;
-
-        alert(successHTML);
-
-        // Close modal and fill in email
-        registerModal.classList.remove('show');
-        document.getElementById('registerForm').reset();
-        document.getElementById('email').value = email;
-        regErrorMessage.classList.remove('show');
-
-    } catch (error) {
-        console.error('❌ Registration error:', error);
-
-        let errorMsg = '❌ Registration failed. ';
-
-        if (error.message.includes('duplicate') || error.message.includes('already exists')) {
-            errorMsg = '❌ This email or Staff ID is already registered!\n\n💡 Try logging in instead or use a different email/Staff ID.';
-        } else if (error.message.includes('Staff ID already exists')) {
-            errorMsg = '❌ ' + error.message;
-        } else if (error.message.includes('Email already registered')) {
-            errorMsg = '❌ ' + error.message;
-        } else if (error.message.includes('invalid email')) {
-            errorMsg = '❌ Please enter a valid email address!';
-        } else if (error.message.includes('password')) {
-            errorMsg = '❌ Password is too weak. Use at least 6 characters.';
-        } else if (error.message.includes('User already registered')) {
-            errorMsg = '❌ This email is already registered!\n\n💡 Try logging in instead or use forgot password.';
-        } else if (error.message.includes('rate limit')) {
-            errorMsg = '❌ Too many attempts. Please try again in a few minutes.';
-        } else {
-            errorMsg += '\n\nError: ' + error.message;
-        }
-
-        showError(errorMsg, true);
-
-    } finally {
-        registerBtn.textContent = 'Register';
-        registerBtn.disabled = false;
-    }
-});
-
-        // ============================================
-        // FORGOT PASSWORD HANDLER
-        // ============================================
-        forgotPasswordLink.addEventListener('click', async (e) => {
-            e.preventDefault();
-            
-            const email = prompt('📧 Enter your email address for password reset:');
-            
-            if (!email) return;
-
-            if (!email.includes('@')) {
-                alert('❌ Please enter a valid email address!');
-                return;
-            }
-            
-            try {
-                const { error } = await supabase.auth.resetPasswordForEmail(email, {
-                    redirectTo: window.location.origin + '/reset-password'
-                });
-                
-                if (error) throw error;
-                
-                alert('✅ Password reset email sent!\n\n📧 Please check your inbox for the reset link.\n\n💡 Check spam folder if not found.');
-                
-            } catch (error) {
-                console.error('Password reset error:', error);
-                alert('❌ Failed to send password reset email.\n\nPlease check:\n• Email address is correct\n• Email is registered\n\nThen try again.');
-            }
-        });
-
-        // ============================================
-        // LOAD REMEMBERED EMAIL ON PAGE LOAD
-        // ============================================
-        window.addEventListener('load', function() {
-            const rememberedEmail = localStorage.getItem('rememberEmail');
-            if (rememberedEmail) {
-                document.getElementById('email').value = rememberedEmail;
-                document.getElementById('remember').checked = true;
-            }
-        });
-
-        // ============================================
-        // CHECK FOR EXISTING SESSION (OPTIONAL)
-        // ============================================
-        async function checkExistingSession() {
-            try {
-                const session = localStorage.getItem('supabase_session');
-                
-                if (session) {
-                    const sessionObj = JSON.parse(session);
-                    const { data: { user }, error } = await supabase.auth.getUser(sessionObj.access_token);
-                    
-                    if (user && !error) {
-                        const userRole = localStorage.getItem('userRole');
-                        
-                        if (userRole === 'teacher') {
-                            console.log('✅ Valid session found, redirecting...');
-                            window.location.replace('/dashboard');
-                        }
-                    } else {
-                        // Clear invalid session
-                        localStorage.clear();
-                    }
-                }
-            } catch (error) {
-                console.log('No valid existing session');
-                localStorage.clear();
-            }
-        }
-
-        // Check for existing session on load (optional)
-        // Uncomment if you want auto-redirect for already logged-in users
-        // checkExistingSession();
-
-        // ============================================
-// ENSURE SESSION PERSISTENCE ON PAGE LOAD
-// ============================================
-(async function initializeAuth() {
-    try {
-        // Try to get the session from Supabase's storage
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (session) {
-            console.log('✅ Existing session found on page load');
-            
-            // If we have a session but no userRole, we might have been redirected back
-            const userRole = localStorage.getItem('userRole');
-            
-            if (!userRole) {
-                // Session exists but user data is missing - let's fetch it
-                const { data: teacherData } = await supabase
-                    .from('teachers')
-                    .select('*')
-                    .eq('user_id', session.user.id)
-                    .single();
-                
-                if (teacherData) {
-                    // Restore user data
-                    localStorage.setItem('userRole', 'teacher');
-                    localStorage.setItem('teacherName', teacherData.name);
-                    localStorage.setItem('teacherId', teacherData.id);
-                    localStorage.setItem('teacherEmail', teacherData.email);
-                    localStorage.setItem('staffId', teacherData.staff_id);
-                    localStorage.setItem('userId', session.user.id);
-                    console.log('✅ User data restored from database');
-                }
-            }
-        }
-    } catch (error) {
-        console.log('No existing session found:', error);
-    }
-})();
-
-
-    </script>
+    // ============================================
+    // PASSWORD RESET
+    // ============================================
+    document.querySelector('.forgot-password').addEventListener('click', (e) => {
+        e.preventDefault();
+        alert('⚠️ Password reset feature coming soon!\n\nPlease contact your administrator for password reset.');
+    });
+</script>
 </body>
 </html>
