@@ -1616,6 +1616,9 @@
         let currentStudentIndex = null;
         let currentStudentId = null;
 
+
+
+
         // ============================================
 // AUTHENTICATION CHECK
 // ============================================
@@ -1688,27 +1691,72 @@ async function checkAuth() {
 
          
                 
-                // Get teacher details from teachers table
-                const { data: teacher, error: teacherError } = await supabase
-                    .from('teachers')
-                    .select('*')
-                    .eq('user_id', session.user.id)
-                    .single();
-                
-                if (teacherError) throw teacherError;
-                
-                if (teacher && teacher.name) {
-                    // Update teacher name in top right
-                    document.getElementById('teacher-name').textContent = teacher.name;
-                    
-                    // Update welcome message
-                    const welcomeMsg = document.getElementById('welcome-message');
-                    if (welcomeMsg) {
-                        welcomeMsg.textContent = `Welcome Back, ${teacher.name}`;
-                    }
-                    
-                    console.log('Teacher info loaded:', teacher.name);
-                }
+              // ============================================
+// MISSING FUNCTIONS - ADD THESE
+// ============================================
+
+// Load teacher information
+async function loadTeacherInfo() {
+    try {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) throw sessionError;
+        
+        if (!session) {
+            console.log('No active session, redirecting to login...');
+            window.location.href = '/login';
+            return;
+        }
+        
+        // Get teacher details from teachers table
+        const { data: teacher, error: teacherError } = await supabase
+            .from('teachers')
+            .select('*')
+            .eq('user_id', session.user.id)
+            .single();
+        
+        if (teacherError) throw teacherError;
+        
+        if (teacher && teacher.name) {
+            // Update teacher name in top right
+            document.getElementById('teacher-name').textContent = teacher.name;
+            
+            // Update welcome message
+            const welcomeMsg = document.getElementById('welcome-message');
+            if (welcomeMsg) {
+                welcomeMsg.textContent = `Welcome Back, ${teacher.name}`;
+            }
+            
+            console.log('Teacher info loaded:', teacher.name);
+        }
+        
+    } catch (error) {
+        console.error('Error loading teacher info:', error);
+        window.location.href = '/login';
+    }
+}
+
+// Logout function
+async function logout() {
+    try {
+        // Sign out from Supabase
+        await supabase.auth.signOut();
+    } catch (error) {
+        console.error('Sign out error:', error);
+    } finally {
+        // Clear ALL storage
+        localStorage.clear();
+        sessionStorage.clear();
+        
+        // Redirect to login page
+        window.location.href = '/login';
+    }
+}
+
+// Toggle sidebar function
+function toggleSidebarFromInside() {
+    document.querySelector('.sidebar').classList.toggle('collapsed');
+}
                 
             } catch (error) {
                 console.error('Error loading teacher info:', error);
@@ -1721,38 +1769,70 @@ async function checkAuth() {
             document.querySelector('.sidebar').classList.toggle('collapsed');
         }
 
-        // Setup navigation - FIXED VERSION
-        function setupNavigation() {
-            // Use event delegation for both sidebar menu items and dashboard cards
-            document.addEventListener('click', function(e) {
-                // Check if clicked element or its parent has data-page attribute
-                let target = e.target;
-                
-                // Traverse up the DOM to find the element with data-page attribute
-                while (target && !target.hasAttribute('data-page')) {
-                    target = target.parentElement;
-                    if (target === document.body) {
-                        target = null;
-                        break;
-                    }
-                }
-                
-                if (target && target.hasAttribute('data-page')) {
-                    e.preventDefault();
-                    const pageId = target.getAttribute('data-page');
-                    console.log('Navigation clicked:', pageId);
-                    
-                    navigateToPage(pageId);
-                    
-                    // Update active menu item
-                    document.querySelectorAll('.menu-item').forEach(i => i.classList.remove('active'));
-                    const menuItem = document.querySelector(`.menu-item[data-page="${pageId}"]`);
-                    if (menuItem) {
-                        menuItem.classList.add('active');
-                    }
-                }
-            });
+      // Setup navigation - IMPROVED VERSION
+function setupNavigation() {
+    console.log('🔄 Setting up navigation...');
+    
+    // Use event delegation for both sidebar menu items and dashboard cards
+    document.addEventListener('click', function(e) {
+        // Check if clicked element or its parent has data-page attribute
+        let target = e.target;
+        
+        // Traverse up the DOM to find the element with data-page attribute
+        while (target && !target.hasAttribute('data-page')) {
+            target = target.parentElement;
+            if (target === document.body) {
+                target = null;
+                break;
+            }
         }
+        
+        if (target && target.hasAttribute('data-page')) {
+            e.preventDefault();
+            const pageId = target.getAttribute('data-page');
+            console.log('Navigation clicked:', pageId);
+            
+            navigateToPage(pageId);
+            
+            // Update active menu item
+            document.querySelectorAll('.menu-item').forEach(i => i.classList.remove('active'));
+            const menuItem = document.querySelector(`.menu-item[data-page="${pageId}"]`);
+            if (menuItem) {
+                menuItem.classList.add('active');
+            }
+        }
+    });
+
+    // Add direct click handlers for dashboard cards as backup
+    document.querySelectorAll('.dashboard-action-card').forEach(card => {
+        card.addEventListener('click', function() {
+            const pageId = this.getAttribute('data-page');
+            console.log('Dashboard card clicked:', pageId);
+            navigateToPage(pageId);
+            
+            // Update active menu item
+            document.querySelectorAll('.menu-item').forEach(i => i.classList.remove('active'));
+            const menuItem = document.querySelector(`.menu-item[data-page="${pageId}"]`);
+            if (menuItem) {
+                menuItem.classList.add('active');
+            }
+        });
+    });
+
+    // Add direct click handlers for sidebar menu items as backup
+    document.querySelectorAll('.menu-item').forEach(item => {
+        item.addEventListener('click', function(e) {
+            e.preventDefault();
+            const pageId = this.getAttribute('data-page');
+            console.log('Menu item clicked:', pageId);
+            navigateToPage(pageId);
+            
+            // Update active menu item
+            document.querySelectorAll('.menu-item').forEach(i => i.classList.remove('active'));
+            this.classList.add('active');
+        });
+    });
+}
 
         // Navigate to page
         function navigateToPage(pageId) {
@@ -1856,6 +1936,42 @@ async function checkAuth() {
             document.getElementById('report-course').addEventListener('change', function() {
                 updateBranchOptions('report-branch', this.value);
             });
+// ============================================
+// MISSING MODAL FUNCTIONS - ADD THESE
+// ============================================
+
+function openImportModal() {
+    document.getElementById('importModal').style.display = 'flex';
+    initializeSpreadsheet();
+}
+
+function closeImportModal() {
+    document.getElementById('importModal').style.display = 'none';
+    importData = [];
+    validatedData = [];
+    document.getElementById('import-submit-btn').disabled = true;
+    document.getElementById('validation-results').style.display = 'none';
+}
+
+function openAddStudentModal() {
+    document.getElementById('addStudentModal').style.display = 'flex';
+    document.getElementById('addStudentForm').reset();
+    // Reset dynamic dropdowns
+    document.getElementById('addCourse').innerHTML = '<option value="">Select Course</option>';
+    document.getElementById('addBranch').innerHTML = '<option value="">Select Branch</option>';
+}
+
+function closeAddStudentModal() {
+    document.getElementById('addStudentModal').style.display = 'none';
+}
+
+function openExportModal() {
+    document.getElementById('exportModal').style.display = 'flex';
+}
+
+function closeExportModal() {
+    document.getElementById('exportModal').style.display = 'none';
+}
         }
 
         // Update course options based on course type
