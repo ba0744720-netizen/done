@@ -1592,51 +1592,7 @@
         const SUPABASE_URL = 'https://iaoladiqgfxjiijnaxuy.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlhb2xhZGlxZ2Z4amlpam5heHV5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5ODIzNTcsImV4cCI6MjA3NzU1ODM1N30.6A1_vyEgVOV9QbSwkmYXegcmq4SLPFukG5vbUJzyA5w';
         
-        // ============================================
-// DASHBOARD - SESSION CHECK (ADD HERE)
-// ============================================
-async function checkAuth() {
-    try {
-        // Get session from Supabase
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (!session) {
-            console.log('❌ No session found, redirecting to login');
-            window.location.href = '/login';
-            return false;
-        }
 
-        // Verify the session is still valid
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        
-        if (userError || !user) {
-            console.log('❌ Invalid session, redirecting to login');
-            localStorage.clear();
-            window.location.href = '/login';
-            return false;
-        }
-
-        // Check if user is a teacher
-        const userRole = localStorage.getItem('userRole');
-        
-        if (userRole !== 'teacher') {
-            console.log('❌ Not a teacher account, redirecting to login');
-            localStorage.clear();
-            await supabase.auth.signOut();
-            window.location.href = '/login';
-            return false;
-        }
-
-        console.log('✅ Authentication verified for:', user.email);
-        return true;
-
-    } catch (error) {
-        console.error('❌ Auth check error:', error);
-        localStorage.clear();
-        window.location.href = '/login';
-        return false;
-    }
-}
 
         // Initialize Supabase client
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -1661,27 +1617,10 @@ async function checkAuth() {
         let currentStudentId = null;
 
         // ============================================
-// SESSION MANAGEMENT - 12 HOUR DURATION
+// AUTHENTICATION CHECK
 // ============================================
-const SESSION_DURATION = 12 * 60 * 60 * 1000; // 12 hours in milliseconds
-
-// Enhanced checkAuth with session expiry
 async function checkAuth() {
     try {
-        // Check last login time
-        const lastLogin = localStorage.getItem('lastLogin');
-        if (lastLogin) {
-            const loginTime = new Date(lastLogin);
-            const currentTime = new Date();
-            const timeDiff = currentTime - loginTime;
-
-            if (timeDiff > SESSION_DURATION) {
-                console.log('⏰ Session expired (12 hours)');
-                await logout();
-                return false;
-            }
-        }
-
         // Get session from Supabase
         const { data: { session }, error } = await supabase.auth.getSession();
         
@@ -1701,17 +1640,6 @@ async function checkAuth() {
             return false;
         }
 
-        // Check if user is a teacher
-        const userRole = localStorage.getItem('userRole');
-        
-        if (userRole !== 'teacher') {
-            console.log('❌ Not a teacher account, redirecting to login');
-            localStorage.clear();
-            await supabase.auth.signOut();
-            window.location.href = '/login';
-            return false;
-        }
-
         console.log('✅ Authentication verified for:', user.email);
         return true;
 
@@ -1722,151 +1650,43 @@ async function checkAuth() {
         return false;
     }
 }
-
-// Auto-logout after 12 hours
-setTimeout(async () => {
-    console.log('⏰ 12-hour session timeout reached');
-    alert('⏰ Your session has expired after 12 hours. Please login again.');
-    await logout();
-}, SESSION_DURATION);
-
-// Check session every 5 minutes as a safety measure
-setInterval(async () => {
-    await checkAuth();
-}, 5 * 60 * 1000); // Every 5 minutes
-
-        // Check and validate session on dashboard load
-        async function checkSession() {
-            try {
-                const lastLogin = localStorage.getItem('lastLogin');
-                const session = localStorage.getItem('supabase_session');
-                
-                // Check if session exists and is not expired
-                if (!session || !lastLogin) {
-                    console.log('❌ No session found');
-                    await logout();
-                    return false;
-                }
-
-                // Check if session is expired (12 hours)
-                const loginTime = new Date(lastLogin);
-                const currentTime = new Date();
-                const timeDiff = currentTime - loginTime;
-
-                if (timeDiff > SESSION_DURATION) {
-                    console.log('⏰ Session expired');
-                    await logout();
-                    return false;
-                }
-
-                // Verify session with Supabase
-                const sessionObj = JSON.parse(session);
-                const { data: { user }, error } = await supabase.auth.getUser(sessionObj.access_token);
-                
-                if (error || !user) {
-                    console.log('❌ Invalid session');
-                    await logout();
-                    return false;
-                }
-
-                console.log('✅ Session valid, time remaining:', Math.round((SESSION_DURATION - timeDiff) / (60 * 60 * 1000)) + ' hours');
-                return true;
-
-            } catch (error) {
-                console.error('Session check error:', error);
-                await logout();
-                return false;
-            }
-        }
-
-        // Enhanced logout function
-        async function logout() {
-            try {
-                // Sign out from Supabase
-                await supabase.auth.signOut();
-            } catch (error) {
-                console.error('Sign out error:', error);
-            } finally {
-                // Clear ALL storage
-                localStorage.clear();
-                sessionStorage.clear();
-                
-                // Redirect to login page
-                window.location.href = '/login';
-            }
-        }
-
         // Update the DOMContentLoaded event in dashboard
        document.addEventListener('DOMContentLoaded', async function() {
     console.log('🔄 Dashboard: DOM loaded');
     
     try {
         // Check authentication first
-        const isAuthenticated = await checkAuth(); // ✅ USE checkAuth instead
+        const isAuthenticated = await checkAuth();
         if (!isAuthenticated) {
-            return; // checkAuth already handles redirect
+            return;
         }
-                
-                // Continue with existing initialization...
-                const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-                
-                if (sessionError || !session || !session.user) {
-                    console.log('❌ No valid session found');
-                    await logout();
-                    return;
-                }
-                
-                console.log('✅ Valid session found for:', session.user.email);
-                
-                // Rest of your existing initialization code...
-                setupEventListeners();
-                updateCurrentDate();
-                await loadTeacherInfo();
-                
-                // Setup navigation - FIXED: No longer using setTimeout
-                setupNavigation();
-                
-                setDefaultDateRange();
-                
-                const editBtn = document.getElementById('edit-attendance-btn');
-                if (editBtn) {
-                    editBtn.addEventListener('click', function() {
-                        enableAttendanceEditing();
-                    });
-                }
-                
-                window.history.replaceState({ page: 'dashboard' }, '', '/dashboard');
-                
-            } catch (error) {
-                console.error('❌ Dashboard error:', error);
-                await logout();
-            }
-        });
+        
+        // If we get here, user is authenticated
+        console.log('✅ User authenticated, loading dashboard...');
+        
+        // Continue with dashboard initialization
+        setupEventListeners();
+        updateCurrentDate();
+        await loadTeacherInfo();
+        setupNavigation();
+        setDefaultDateRange();
+        
+        const editBtn = document.getElementById('edit-attendance-btn');
+        if (editBtn) {
+            editBtn.addEventListener('click', function() {
+                enableAttendanceEditing();
+            });
+        }
+        
+        window.history.replaceState({ page: 'dashboard' }, '', '/dashboard');
+        
+    } catch (error) {
+        console.error('❌ Dashboard error:', error);
+        await logout();
+    }
+});
 
-        // Auto-logout after 12 hours
-        setTimeout(async () => {
-            console.log('⏰ 12-hour session timeout reached');
-            await logout();
-        }, SESSION_DURATION);
-
-        // Also check session every minute as a safety measure
-        setInterval(async () => {
-            await checkSession();
-        }, 60 * 1000);
-
-        // Load teacher information from Supabase session
-        async function loadTeacherInfo() {
-            try {
-                // Get current session from Supabase
-                const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-                
-                if (sessionError) throw sessionError;
-                
-                if (!session) {
-                    console.log('No active session, redirecting to login...');
-                    window.location.href = '/login';
-                    return;
-                }
+         
                 
                 // Get teacher details from teachers table
                 const { data: teacher, error: teacherError } = await supabase
